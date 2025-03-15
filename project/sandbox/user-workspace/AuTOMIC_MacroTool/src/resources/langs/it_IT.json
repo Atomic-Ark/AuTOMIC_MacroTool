@@ -1,148 +1,240 @@
 {
     "app": {
         "name": "AuTOMIC MacroTool",
-        "version": "1.0.0",
-        "author": "AtomicArk",
-        "description": "Strumento Avanzato di Registrazione e Automazione Macro"
-    },
-    "general": {
-        "ok": "OK",
-        "cancel": "Annulla",
-        "apply": "Applica",
-        "save": "Salva",
-        "delete": "Elimina",
-        "edit": "Modifica",
-        "close": "Chiudi",
-        "error": "Errore",
-        "warning": "Avviso",
-        "info": "Informazione",
-        "success": "Successo",
-        "loading": "Caricamento...",
-        "processing": "Elaborazione...",
-        "please_wait": "Attendere prego..."
+        "version": "Versione %s",
+        "copyright": "© 2025 AtomicArk. Tutti i diritti riservati.",
+        "website": "https://github.com/Atomic-Ark/AuTOMIC_MacroTool"
     },
     "menu": {
-        "file": "File",
-        "edit": "Modifica",
-        "view": "Visualizza",
-        "tools": "Strumenti",
-        "help": "Aiuto",
+        "file": {
+            "title": "File",
+            "new_macro": "Nuova Macro",
+            "open_macro": "Apri Macro...",
+            "save_macro": "Salva Macro",
+            "save_as": "Salva con nome...",
+            "import": "Importa...",
+            "export": "Esporta...",
+            "settings": "Impostazioni",
+            "exit": "Esci"
+        },
+        "edit": {
+            "title": "Modifica",
+            "undo": "Annulla",
+            "redo": "Ripeti",
+            "cut": "Taglia",
+            "copy": "Copia",
+            "paste": "Incolla",
+            "delete": "Elimina",
+            "select_all": "Seleziona tutto"
+        },
+        "view": {
+            "title": "Visualizza",
+            "toolbar": "Barra degli strumenti",
+            "status_bar": "Barra di stato",
+            "macro_list": "Lista macro",
+            "script_editor": "Editor di script"
+        },
+        "macro": {
+            "title": "Macro",
+            "record": "Registra",
+            "stop": "Ferma",
+            "play": "Riproduci",
+            "pause": "Pausa",
+            "edit": "Modifica",
+            "delete": "Elimina",
+            "properties": "Proprietà"
+        },
+        "script": {
+            "title": "Script",
+            "new": "Nuovo Script",
+            "open": "Apri Script...",
+            "save": "Salva Script",
+            "save_as": "Salva Script con nome...",
+            "run": "Esegui Script",
+            "stop": "Ferma Script",
+            "check": "Controlla Sintassi"
+        },
+        "help": {
+            "title": "Aiuto",
+            "documentation": "Documentazione",
+            "api_reference": "Riferimento API",
+            "check_updates": "Controlla aggiornamenti",
+            "about": "Informazioni"
+        }
+    },
+    "toolbar": {
         "new_macro": "Nuova Macro",
         "open_macro": "Apri Macro",
         "save_macro": "Salva Macro",
-        "save_as": "Salva con nome",
-        "import": "Importa",
-        "export": "Esporta",
-        "settings": "Impostazioni",
-        "exit": "Esci"
-    },
-    "toolbar": {
         "record": "Registra",
-        "stop": "Stop",
+        "stop": "Ferma",
         "play": "Riproduci",
         "pause": "Pausa",
-        "settings": "Impostazioni",
-        "help": "Aiuto"
+        "settings": "Impostazioni"
     },
-    "macro": {
-        "slot": "Slot",
-        "name": "Nome",
-        "type": "Tipo",
-        "created": "Creato",
-        "modified": "Modificato",
-        "description": "Descrizione",
-        "author": "Autore",
-        "version": "Versione",
-        "tags": "Tag",
-        "recorded": "Registrato",
-        "scripted": "Script",
-        "hybrid": "Ibrido",
-        "empty_slot": "Slot Vuoto",
-        "recording": "Registrazione...",
-        "playing": "Riproduzione...",
+    "status": {
+        "ready": "Pronto",
+        "recording": "Registrazione in corso...",
+        "playing": "Riproduzione in corso...",
         "paused": "In pausa",
         "stopped": "Fermato",
-        "no_macro": "Nessuna macro caricata",
-        "delete_confirm": "Sei sicuro di voler eliminare questa macro?",
-        "overwrite_confirm": "La macro esiste già. Vuoi sovrascriverla?"
+        "error": "Errore: %s",
+        "saved": "Salvato",
+        "modified": "Modificato"
     },
-    "settings": {
-        "general": "Generale",
-        "recording": "Registrazione",
-        "playback": "Riproduzione",
-        "hotkeys": "Tasti rapidi",
-        "advanced": "Avanzate",
-        "language": "Lingua",
-        "theme": "Tema",
-        "ui_scale": "Scala interfaccia",
-        "autostart": "Avvia con Windows",
-        "minimize_tray": "Riduci a icona",
-        "check_updates": "Controlla aggiornamenti",
-        "record_mouse": "Registra mouse",
-        "record_keyboard": "Registra tastiera",
-        "record_delays": "Registra ritardi",
-        "min_delay": "Ritardo minimo",
-        "window_mode": "Modalità finestra",
-        "macro_directory": "Cartella macro",
-        "playback_mode": "Modalità riproduzione",
-        "repeat_count": "Numero ripetizioni",
-        "speed": "Velocità",
-        "randomize_delays": "Ritardi casuali",
-        "random_factor": "Fattore casuale",
-        "stop_on_input": "Ferma su input",
-        "restore_mouse": "Ripristina posizione mouse",
-        "stealth_mode": "Modalità stealth",
-        "panic_hotkey": "Tasto panico",
-        "debug_level": "Livello debug",
-        "performance_mode": "Modalità prestazioni",
-        "reset_settings": "Ripristina impostazioni",
-        "reset_confirm": "Sei sicuro di voler ripristinare tutte le impostazioni?"
+    "dialogs": {
+        "macro": {
+            "new": {
+                "title": "Nuova Macro",
+                "name": "Nome:",
+                "description": "Descrizione:",
+                "type": "Tipo:",
+                "window": "Finestra",
+                "screen": "Schermo",
+                "directx": "DirectX"
+            },
+            "properties": {
+                "title": "Proprietà Macro",
+                "name": "Nome:",
+                "description": "Descrizione:",
+                "author": "Autore:",
+                "version": "Versione:",
+                "created": "Creato:",
+                "modified": "Modificato:",
+                "type": "Tipo:",
+                "target": "Finestra di destinazione:",
+                "hotkey": "Tasto rapido:",
+                "slot": "Slot:"
+            },
+            "delete": {
+                "title": "Elimina Macro",
+                "confirm": "Sei sicuro di voler eliminare questa macro?",
+                "multiple": "Sei sicuro di voler eliminare %d macro?"
+            },
+            "save": {
+                "title": "Salva Macro",
+                "confirm": "Salvare le modifiche alla macro?",
+                "error": "Impossibile salvare la macro"
+            }
+        },
+        "script": {
+            "new": {
+                "title": "Nuovo Script",
+                "template": "Usa modello"
+            },
+            "save": {
+                "title": "Salva Script",
+                "confirm": "Salvare le modifiche allo script?",
+                "error": "Impossibile salvare lo script"
+            },
+            "syntax": {
+                "title": "Errore di Sintassi",
+                "error": "Errore di sintassi: %s"
+            },
+            "run": {
+                "title": "Esegui Script",
+                "error": "Impossibile eseguire lo script: %s"
+            }
+        },
+        "settings": {
+            "title": "Impostazioni",
+            "general": {
+                "title": "Generale",
+                "language": "Lingua:",
+                "theme": "Tema:",
+                "ui_scale": "Scala interfaccia:",
+                "autostart": "Avvia con Windows",
+                "minimize": "Avvia minimizzato",
+                "updates": "Controlla aggiornamenti"
+            },
+            "recording": {
+                "title": "Registrazione",
+                "mouse": "Registra mouse",
+                "keyboard": "Registra tastiera",
+                "delays": "Registra ritardi",
+                "min_delay": "Ritardo minimo:",
+                "window_mode": "Modalità finestra",
+                "directx_mode": "Modalità DirectX"
+            },
+            "playback": {
+                "title": "Riproduzione",
+                "repeat": "Modalità ripetizione:",
+                "count": "Numero ripetizioni:",
+                "speed": "Velocità:",
+                "random": "Ritardi casuali",
+                "stop": "Ferma su input",
+                "restore": "Ripristina posizione mouse",
+                "stealth": "Modalità stealth"
+            },
+            "hotkeys": {
+                "title": "Tasti rapidi",
+                "record": "Avvia/Ferma Registrazione",
+                "play": "Avvia/Ferma Riproduzione",
+                "pause": "Pausa Riproduzione",
+                "script": "Avvia/Ferma Script",
+                "panic": "Pulsante Panico",
+                "show": "Mostra/Nascondi Finestra"
+            },
+            "advanced": {
+                "title": "Avanzate",
+                "debug": "Livello debug:",
+                "performance": "Modalità prestazioni",
+                "macro_dir": "Cartella macro:",
+                "backup_dir": "Cartella backup:",
+                "browse": "Sfoglia..."
+            }
+        },
+        "about": {
+            "title": "Informazioni su %s",
+            "version": "Versione %s",
+            "copyright": "© 2025 AtomicArk. Tutti i diritti riservati.",
+            "description": "Strumento avanzato per la registrazione e l'automazione di macro",
+            "website": "Visita il sito web",
+            "license": "Licenza",
+            "credits": "Crediti",
+            "close": "Chiudi"
+        },
+        "error": {
+            "title": "Errore",
+            "unknown": "Si è verificato un errore sconosciuto",
+            "file_not_found": "File non trovato",
+            "access_denied": "Accesso negato",
+            "invalid_format": "Formato file non valido",
+            "already_exists": "Il file esiste già"
+        }
+    },
+    "tray": {
+        "show": "Mostra",
+        "hide": "Nascondi",
+        "record": "Registra",
+        "stop": "Ferma",
+        "play": "Riproduci",
+        "pause": "Pausa",
+        "exit": "Esci"
+    },
+    "slots": {
+        "empty": "Slot vuoto",
+        "drag": "Trascina qui una macro",
+        "clear": "Svuota slot",
+        "assign": "Assegna macro"
     },
     "script": {
-        "editor": "Editor script",
-        "check_syntax": "Controlla sintassi",
-        "test_run": "Prova",
-        "save_script": "Salva script",
-        "syntax_ok": "Controllo sintassi superato",
-        "syntax_error": "Errore di sintassi: {0}",
-        "test_success": "Test riuscito",
-        "test_error": "Test fallito: {0}",
-        "unsaved_changes": "Hai modifiche non salvate. Vuoi salvarle?"
-    },
-    "updates": {
-        "checking": "Controllo aggiornamenti...",
-        "available": "Aggiornamento disponibile",
-        "up_to_date": "Applicazione aggiornata",
-        "error": "Errore controllo aggiornamenti",
-        "download": "Scarica aggiornamento",
-        "installing": "Installazione aggiornamento...",
-        "restart_required": "Riavvio necessario per completare l'aggiornamento"
-    },
-    "errors": {
-        "recording_failed": "Impossibile avviare la registrazione",
-        "playback_failed": "Impossibile avviare la riproduzione",
-        "save_failed": "Impossibile salvare la macro",
-        "load_failed": "Impossibile caricare la macro",
-        "delete_failed": "Impossibile eliminare la macro",
-        "settings_failed": "Impossibile salvare le impostazioni",
-        "driver_failed": "Impossibile installare il driver",
-        "permission_denied": "Permesso negato",
-        "file_not_found": "File non trovato",
-        "invalid_format": "Formato file non valido",
-        "unknown_error": "Si è verificato un errore sconosciuto"
-    },
-    "help": {
-        "getting_started": "Introduzione",
-        "recording": "Registrazione macro",
-        "playback": "Riproduzione macro",
-        "scripting": "Script macro",
-        "settings": "Guida impostazioni",
-        "troubleshooting": "Risoluzione problemi",
-        "about": "Informazioni",
-        "support": "Supporto",
-        "documentation": "Documentazione",
-        "check_updates": "Controlla aggiornamenti",
-        "report_bug": "Segnala bug",
-        "feedback": "Invia feedback"
+        "template": "# Script AuTOMIC MacroTool\n# Creato: %s\n\n# Importa i moduli necessari\nfrom time import sleep\n\n# Il tuo codice qui\n",
+        "api": {
+            "key_press": "Simula input tastiera",
+            "mouse_move": "Muovi cursore mouse",
+            "mouse_click": "Simula click mouse",
+            "mouse_scroll": "Simula rotella mouse",
+            "get_window": "Ottieni informazioni finestra",
+            "find_window": "Trova finestra per titolo",
+            "get_active_window": "Ottieni finestra attiva",
+            "bring_to_front": "Porta finestra in primo piano",
+            "sleep": "Attendi tempo specificato",
+            "log": "Registra messaggio",
+            "debug": "Registra messaggio debug",
+            "wait_for_window": "Attendi comparsa finestra",
+            "repeat": "Ripeti azione più volte",
+            "wait_until": "Attendi fino a condizione"
+        }
     }
 }
