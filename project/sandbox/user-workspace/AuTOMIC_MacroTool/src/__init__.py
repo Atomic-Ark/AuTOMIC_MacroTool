@@ -1,140 +1,155 @@
 """
 AuTOMIC MacroTool - Advanced Macro Recording and Automation Tool
-Copyright (c) 2023 AtomicArk
+Copyright (c) 2025 AtomicArk
 """
 
 __title__ = "AuTOMIC MacroTool"
 __version__ = "1.0.0"
 __author__ = "AtomicArk"
+__author_email__ = "atomicarkft@gmail.com"
 __license__ = "MIT"
-__copyright__ = "Copyright 2023 AtomicArk"
+__copyright__ = "Copyright (c) 2025 AtomicArk"
+__website__ = "https://github.com/Atomic-Ark/AuTOMIC_MacroTool"
+__description__ = "Advanced Macro Recording and Automation Tool"
+__release_date__ = "2025-03-15"
 
-import sys
-import os
-import logging
-from pathlib import Path
+# Package information
+PACKAGE_NAME = "atomic_macro"
+PACKAGE_DIR = "AuTOMIC_MacroTool"
 
-# Package metadata
-PACKAGE_NAME = "atomic_macro_tool"
-PACKAGE_AUTHOR = "AtomicArk"
-PACKAGE_EMAIL = "atomicark@example.com"
-PACKAGE_URL = "https://github.com/atomicark/atomic-macro-tool"
-PACKAGE_DESCRIPTION = "Advanced Macro Recording and Automation Tool"
+# Application information
+APP_NAME = "AuTOMIC MacroTool"
+APP_ID = "com.atomicark.atomic_macro"
+APP_ICON = "resources/icons/app.ico"
+APP_CONFIG = "config.json"
 
-# Application paths
-APP_DIR = Path(__file__).parent
-RESOURCES_DIR = APP_DIR / "resources"
-LANGS_DIR = RESOURCES_DIR / "langs"
-ICONS_DIR = RESOURCES_DIR / "icons"
-THEMES_DIR = RESOURCES_DIR / "themes"
+# Feature flags
+FEATURES = {
+    'stealth_mode': True,      # Enable stealth mode input simulation
+    'directx_support': True,   # Enable DirectX window support
+    'cloud_sync': False,       # Future: Cloud synchronization
+    'plugins': False,          # Future: Plugin system
+    'marketplace': False,      # Future: Macro marketplace
+    'ai_assist': False,        # Future: AI-assisted automation
+}
 
-# User data paths
-USER_DIR = Path.home() / "Documents" / "AuTOMIC_MacroTool"
-CONFIG_DIR = USER_DIR / "config"
-MACROS_DIR = USER_DIR / "macros"
-LOGS_DIR = USER_DIR / "logs"
-DEBUG_DIR = USER_DIR / "debug"
+# Default configuration
+DEFAULT_CONFIG = {
+    'language': '',            # Auto-detect if empty
+    'theme': '',              # Auto-detect if empty
+    'ui_scale': 1.0,
+    'autostart': False,
+    'minimize_to_tray': True,
+    'check_updates': True,
+}
 
-# Ensure directories exist
-for directory in [USER_DIR, CONFIG_DIR, MACROS_DIR, LOGS_DIR, DEBUG_DIR]:
-    directory.mkdir(parents=True, exist_ok=True)
+# Supported languages
+SUPPORTED_LANGUAGES = {
+    'en_US': 'English',
+    'pl_PL': 'Polski',
+    'de_DE': 'Deutsch',
+    'fr_FR': 'Français',
+    'it_IT': 'Italiano',
+    'es_ES': 'Español',
+}
 
-# Setup basic logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(
-            LOGS_DIR / f"atomic_macro_{__version__}.log",
-            encoding='utf-8'
-        )
-    ]
-)
+# Supported themes
+SUPPORTED_THEMES = [
+    'light',
+    'dark',
+    'system',
+    'custom',
+]
 
-# Logger for this module
-logger = logging.getLogger(__name__)
+# File extensions
+FILE_EXTENSIONS = {
+    'macro': '.atomic',        # Macro files
+    'script': '.py',           # Script files
+    'theme': '.qss',          # Theme files
+    'config': '.json',         # Configuration files
+    'backup': '.zip',         # Backup archives
+}
 
-def is_frozen():
-    """Check if running as frozen executable."""
-    return getattr(sys, 'frozen', False)
+# API version
+API_VERSION = "1.0"
 
-def get_resource_path(relative_path: str) -> Path:
-    """Get absolute path to resource, works for dev and for PyInstaller."""
-    if is_frozen():
-        # Running as frozen executable
-        base_path = Path(sys._MEIPASS)
-    else:
-        # Running in development
-        base_path = APP_DIR
-    
-    return base_path / relative_path
+# Documentation URLs
+DOCS = {
+    'main': f"{__website__}/wiki",
+    'api': f"{__website__}/wiki/api",
+    'scripting': f"{__website__}/wiki/scripting",
+    'examples': f"{__website__}/wiki/examples",
+}
 
-def is_portable():
-    """Check if running in portable mode."""
-    if is_frozen():
-        portable_marker = Path(sys.executable).parent / "portable.txt"
-        return portable_marker.exists()
-    return False
+# Update information
+UPDATE_INFO = {
+    'check_url': f"{__website__}/releases/latest",
+    'download_url': f"{__website__}/releases/download",
+    'changelog_url': f"{__website__}/releases",
+    'min_version': "1.0.0",
+}
 
-def get_data_dir() -> Path:
-    """Get data directory based on mode."""
-    if is_portable():
-        # Use local directory in portable mode
-        return Path(sys.executable).parent / "data"
-    return USER_DIR
+# Contact information
+CONTACT_INFO = {
+    'email': __author_email__,
+    'website': __website__,
+    'issues': f"{__website__}/issues",
+    'discussions': f"{__website__}/discussions",
+}
 
-def init_application():
-    """Initialize application environment."""
-    try:
-        logger.info(f"Initializing {__title__} v{__version__}")
-        logger.info(f"Running {'frozen' if is_frozen() else 'development'} mode")
-        logger.info(f"Running {'portable' if is_portable() else 'installed'} mode")
-        
-        # Set application paths
-        if is_portable():
-            global USER_DIR, CONFIG_DIR, MACROS_DIR, LOGS_DIR, DEBUG_DIR
-            base_dir = get_data_dir()
-            USER_DIR = base_dir
-            CONFIG_DIR = base_dir / "config"
-            MACROS_DIR = base_dir / "macros"
-            LOGS_DIR = base_dir / "logs"
-            DEBUG_DIR = base_dir / "debug"
-            
-            # Create directories
-            for directory in [USER_DIR, CONFIG_DIR, MACROS_DIR, LOGS_DIR, DEBUG_DIR]:
-                directory.mkdir(parents=True, exist_ok=True)
-        
-        # Log system information
-        import platform
-        logger.info(f"Python version: {platform.python_version()}")
-        logger.info(f"Platform: {platform.platform()}")
-        logger.info(f"Data directory: {USER_DIR}")
-        
-        # Check write permissions
-        for directory in [USER_DIR, CONFIG_DIR, MACROS_DIR, LOGS_DIR, DEBUG_DIR]:
-            if not os.access(directory, os.W_OK):
-                logger.warning(f"No write permission: {directory}")
-        
-        # Import optional dependencies
-        try:
-            import win32api
-            import win32con
-            logger.info("Windows API available")
-        except ImportError:
-            logger.warning("Windows API not available")
-        
-        try:
-            import cv2
-            logger.info("OpenCV available")
-        except ImportError:
-            logger.warning("OpenCV not available")
-        
-        logger.info("Initialization complete")
-        
-    except Exception as e:
-        logger.error(f"Initialization failed: {e}")
-        raise
+# System requirements
+SYSTEM_REQUIREMENTS = {
+    'os': 'Windows',
+    'python': ">=3.8",
+    'memory': "256MB",
+    'storage': "100MB",
+}
 
-# Initialize on import
-init_application()
+def get_version():
+    """Get package version."""
+    return __version__
+
+def get_app_info():
+    """Get application information."""
+    return {
+        'name': APP_NAME,
+        'version': __version__,
+        'author': __author__,
+        'email': __author_email__,
+        'license': __license__,
+        'website': __website__,
+        'description': __description__,
+        'release_date': __release_date__,
+    }
+
+def is_feature_enabled(feature: str) -> bool:
+    """Check if a feature is enabled."""
+    return FEATURES.get(feature, False)
+
+def get_supported_languages():
+    """Get supported languages."""
+    return SUPPORTED_LANGUAGES.copy()
+
+def get_supported_themes():
+    """Get supported themes."""
+    return SUPPORTED_THEMES.copy()
+
+def get_file_extension(file_type: str) -> str:
+    """Get file extension for given type."""
+    return FILE_EXTENSIONS.get(file_type, '')
+
+def get_docs_url(section: str = 'main') -> str:
+    """Get documentation URL."""
+    return DOCS.get(section, DOCS['main'])
+
+def get_update_info():
+    """Get update information."""
+    return UPDATE_INFO.copy()
+
+def get_contact_info():
+    """Get contact information."""
+    return CONTACT_INFO.copy()
+
+def get_system_requirements():
+    """Get system requirements."""
+    return SYSTEM_REQUIREMENTS.copy()
