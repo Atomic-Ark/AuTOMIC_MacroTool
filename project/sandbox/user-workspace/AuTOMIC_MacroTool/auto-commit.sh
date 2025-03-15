@@ -6,29 +6,16 @@ cd /project/sandbox/user-workspace/AuTOMIC_MacroTool
 while true; do
     echo "Checking for changes at $(date)..."
     
-    # Zapisz aktualne zmiany
+    # Sprawdź i commituj zmiany
     git add .
-    if ! git diff --staged --quiet; then
+    if git diff --staged --quiet; then
+        echo "No changes to commit"
+    else
         echo "Changes detected, committing..."
         git commit -m "Auto-commit: $(date)"
-    fi
-    
-    # Pobierz i połącz zmiany z GitHuba
-    echo "Synchronizing with GitHub..."
-    if git pull origin main --rebase; then
-        # Jeśli są lokalne commity, wypchnij je
-        if git log origin/main..HEAD | grep -q .; then
-            echo "Pushing changes to GitHub..."
-            if git push origin main; then
-                echo "Changes successfully pushed to GitHub"
-            else
-                echo "Error pushing changes to GitHub"
-            fi
-        else
-            echo "No local changes to push"
-        fi
-    else
-        echo "Error pulling from GitHub"
+        echo "Pushing to GitHub..."
+        git push origin main --force
+        echo "Changes pushed to GitHub"
     fi
     
     echo "Waiting 5 minutes before next check..."
