@@ -1,148 +1,240 @@
 {
     "app": {
         "name": "AuTOMIC MacroTool",
-        "version": "1.0.0",
-        "author": "AtomicArk",
-        "description": "Zaawansowane Narzędzie do Nagrywania i Automatyzacji Makr"
-    },
-    "general": {
-        "ok": "OK",
-        "cancel": "Anuluj",
-        "apply": "Zastosuj",
-        "save": "Zapisz",
-        "delete": "Usuń",
-        "edit": "Edytuj",
-        "close": "Zamknij",
-        "error": "Błąd",
-        "warning": "Ostrzeżenie",
-        "info": "Informacja",
-        "success": "Sukces",
-        "loading": "Ładowanie...",
-        "processing": "Przetwarzanie...",
-        "please_wait": "Proszę czekać..."
+        "version": "Wersja %s",
+        "copyright": "© 2025 AtomicArk. Wszelkie prawa zastrzeżone.",
+        "website": "https://github.com/Atomic-Ark/AuTOMIC_MacroTool"
     },
     "menu": {
-        "file": "Plik",
-        "edit": "Edycja",
-        "view": "Widok",
-        "tools": "Narzędzia",
-        "help": "Pomoc",
+        "file": {
+            "title": "Plik",
+            "new_macro": "Nowe Makro",
+            "open_macro": "Otwórz Makro...",
+            "save_macro": "Zapisz Makro",
+            "save_as": "Zapisz Jako...",
+            "import": "Importuj...",
+            "export": "Eksportuj...",
+            "settings": "Ustawienia",
+            "exit": "Zakończ"
+        },
+        "edit": {
+            "title": "Edycja",
+            "undo": "Cofnij",
+            "redo": "Ponów",
+            "cut": "Wytnij",
+            "copy": "Kopiuj",
+            "paste": "Wklej",
+            "delete": "Usuń",
+            "select_all": "Zaznacz Wszystko"
+        },
+        "view": {
+            "title": "Widok",
+            "toolbar": "Pasek Narzędzi",
+            "status_bar": "Pasek Stanu",
+            "macro_list": "Lista Makr",
+            "script_editor": "Edytor Skryptów"
+        },
+        "macro": {
+            "title": "Makro",
+            "record": "Nagrywaj",
+            "stop": "Zatrzymaj",
+            "play": "Odtwórz",
+            "pause": "Pauza",
+            "edit": "Edytuj",
+            "delete": "Usuń",
+            "properties": "Właściwości"
+        },
+        "script": {
+            "title": "Skrypt",
+            "new": "Nowy Skrypt",
+            "open": "Otwórz Skrypt...",
+            "save": "Zapisz Skrypt",
+            "save_as": "Zapisz Skrypt Jako...",
+            "run": "Uruchom Skrypt",
+            "stop": "Zatrzymaj Skrypt",
+            "check": "Sprawdź Składnię"
+        },
+        "help": {
+            "title": "Pomoc",
+            "documentation": "Dokumentacja",
+            "api_reference": "Dokumentacja API",
+            "check_updates": "Sprawdź Aktualizacje",
+            "about": "O Programie"
+        }
+    },
+    "toolbar": {
         "new_macro": "Nowe Makro",
         "open_macro": "Otwórz Makro",
         "save_macro": "Zapisz Makro",
-        "save_as": "Zapisz Jako",
-        "import": "Importuj",
-        "export": "Eksportuj",
-        "settings": "Ustawienia",
-        "exit": "Wyjście"
-    },
-    "toolbar": {
         "record": "Nagrywaj",
-        "stop": "Stop",
+        "stop": "Zatrzymaj",
         "play": "Odtwórz",
         "pause": "Pauza",
-        "settings": "Ustawienia",
-        "help": "Pomoc"
+        "settings": "Ustawienia"
     },
-    "macro": {
-        "slot": "Slot",
-        "name": "Nazwa",
-        "type": "Typ",
-        "created": "Utworzono",
-        "modified": "Zmodyfikowano",
-        "description": "Opis",
-        "author": "Autor",
-        "version": "Wersja",
-        "tags": "Tagi",
-        "recorded": "Nagrany",
-        "scripted": "Skryptowy",
-        "hybrid": "Hybrydowy",
-        "empty_slot": "Pusty Slot",
+    "status": {
+        "ready": "Gotowy",
         "recording": "Nagrywanie...",
         "playing": "Odtwarzanie...",
         "paused": "Wstrzymano",
         "stopped": "Zatrzymano",
-        "no_macro": "Brak załadowanego makra",
-        "delete_confirm": "Czy na pewno chcesz usunąć to makro?",
-        "overwrite_confirm": "Makro już istnieje. Czy chcesz je nadpisać?"
+        "error": "Błąd: %s",
+        "saved": "Zapisano",
+        "modified": "Zmodyfikowano"
     },
-    "settings": {
-        "general": "Ogólne",
-        "recording": "Nagrywanie",
-        "playback": "Odtwarzanie",
-        "hotkeys": "Skróty Klawiszowe",
-        "advanced": "Zaawansowane",
-        "language": "Język",
-        "theme": "Motyw",
-        "ui_scale": "Skala UI",
-        "autostart": "Uruchamiaj z Windows",
-        "minimize_tray": "Minimalizuj do Zasobnika",
-        "check_updates": "Sprawdzaj Aktualizacje",
-        "record_mouse": "Nagrywaj Mysz",
-        "record_keyboard": "Nagrywaj Klawiaturę",
-        "record_delays": "Nagrywaj Opóźnienia",
-        "min_delay": "Minimalne Opóźnienie",
-        "window_mode": "Tryb Okna",
-        "macro_directory": "Katalog Makr",
-        "playback_mode": "Tryb Odtwarzania",
-        "repeat_count": "Liczba Powtórzeń",
-        "speed": "Prędkość",
-        "randomize_delays": "Losowe Opóźnienia",
-        "random_factor": "Współczynnik Losowości",
-        "stop_on_input": "Zatrzymaj przy Wejściu",
-        "restore_mouse": "Przywróć Pozycję Myszy",
-        "stealth_mode": "Tryb Ukryty",
-        "panic_hotkey": "Przycisk Paniki",
-        "debug_level": "Poziom Debugowania",
-        "performance_mode": "Tryb Wydajności",
-        "reset_settings": "Resetuj Ustawienia",
-        "reset_confirm": "Czy na pewno chcesz zresetować wszystkie ustawienia?"
+    "dialogs": {
+        "macro": {
+            "new": {
+                "title": "Nowe Makro",
+                "name": "Nazwa:",
+                "description": "Opis:",
+                "type": "Typ:",
+                "window": "Okno",
+                "screen": "Ekran",
+                "directx": "DirectX"
+            },
+            "properties": {
+                "title": "Właściwości Makra",
+                "name": "Nazwa:",
+                "description": "Opis:",
+                "author": "Autor:",
+                "version": "Wersja:",
+                "created": "Utworzono:",
+                "modified": "Zmodyfikowano:",
+                "type": "Typ:",
+                "target": "Okno Docelowe:",
+                "hotkey": "Skrót:",
+                "slot": "Slot:"
+            },
+            "delete": {
+                "title": "Usuń Makro",
+                "confirm": "Czy na pewno chcesz usunąć to makro?",
+                "multiple": "Czy na pewno chcesz usunąć %d makr?"
+            },
+            "save": {
+                "title": "Zapisz Makro",
+                "confirm": "Zapisać zmiany w makrze?",
+                "error": "Nie udało się zapisać makra"
+            }
+        },
+        "script": {
+            "new": {
+                "title": "Nowy Skrypt",
+                "template": "Użyj Szablonu"
+            },
+            "save": {
+                "title": "Zapisz Skrypt",
+                "confirm": "Zapisać zmiany w skrypcie?",
+                "error": "Nie udało się zapisać skryptu"
+            },
+            "syntax": {
+                "title": "Błąd Składni",
+                "error": "Błąd składni: %s"
+            },
+            "run": {
+                "title": "Uruchom Skrypt",
+                "error": "Nie udało się uruchomić skryptu: %s"
+            }
+        },
+        "settings": {
+            "title": "Ustawienia",
+            "general": {
+                "title": "Ogólne",
+                "language": "Język:",
+                "theme": "Motyw:",
+                "ui_scale": "Skala UI:",
+                "autostart": "Uruchamiaj z Windows",
+                "minimize": "Uruchamiaj zminimalizowany",
+                "updates": "Sprawdzaj aktualizacje"
+            },
+            "recording": {
+                "title": "Nagrywanie",
+                "mouse": "Nagrywaj mysz",
+                "keyboard": "Nagrywaj klawiaturę",
+                "delays": "Nagrywaj opóźnienia",
+                "min_delay": "Minimalne opóźnienie:",
+                "window_mode": "Tryb okna",
+                "directx_mode": "Tryb DirectX"
+            },
+            "playback": {
+                "title": "Odtwarzanie",
+                "repeat": "Tryb powtarzania:",
+                "count": "Liczba powtórzeń:",
+                "speed": "Prędkość:",
+                "random": "Losowe opóźnienia",
+                "stop": "Zatrzymaj przy wejściu",
+                "restore": "Przywróć pozycję myszy",
+                "stealth": "Tryb ukryty"
+            },
+            "hotkeys": {
+                "title": "Skróty",
+                "record": "Start/Stop Nagrywania",
+                "play": "Start/Stop Odtwarzania",
+                "pause": "Pauza Odtwarzania",
+                "script": "Uruchom/Zatrzymaj Skrypt",
+                "panic": "Przycisk Paniki",
+                "show": "Pokaż/Ukryj Okno"
+            },
+            "advanced": {
+                "title": "Zaawansowane",
+                "debug": "Poziom debugowania:",
+                "performance": "Tryb wydajności",
+                "macro_dir": "Katalog makr:",
+                "backup_dir": "Katalog kopii:",
+                "browse": "Przeglądaj..."
+            }
+        },
+        "about": {
+            "title": "O programie %s",
+            "version": "Wersja %s",
+            "copyright": "© 2025 AtomicArk. Wszelkie prawa zastrzeżone.",
+            "description": "Zaawansowane Narzędzie do Nagrywania i Automatyzacji Makr",
+            "website": "Odwiedź Stronę",
+            "license": "Licencja",
+            "credits": "Autorzy",
+            "close": "Zamknij"
+        },
+        "error": {
+            "title": "Błąd",
+            "unknown": "Wystąpił nieznany błąd",
+            "file_not_found": "Nie znaleziono pliku",
+            "access_denied": "Odmowa dostępu",
+            "invalid_format": "Nieprawidłowy format pliku",
+            "already_exists": "Plik już istnieje"
+        }
+    },
+    "tray": {
+        "show": "Pokaż",
+        "hide": "Ukryj",
+        "record": "Nagrywaj",
+        "stop": "Zatrzymaj",
+        "play": "Odtwórz",
+        "pause": "Pauza",
+        "exit": "Zakończ"
+    },
+    "slots": {
+        "empty": "Pusty Slot",
+        "drag": "Przeciągnij makro tutaj",
+        "clear": "Wyczyść Slot",
+        "assign": "Przypisz Makro"
     },
     "script": {
-        "editor": "Edytor Skryptów",
-        "check_syntax": "Sprawdź Składnię",
-        "test_run": "Test",
-        "save_script": "Zapisz Skrypt",
-        "syntax_ok": "Sprawdzanie składni pomyślne",
-        "syntax_error": "Błąd składni: {0}",
-        "test_success": "Test zakończony pomyślnie",
-        "test_error": "Test nie powiódł się: {0}",
-        "unsaved_changes": "Masz niezapisane zmiany. Czy chcesz je zapisać?"
-    },
-    "updates": {
-        "checking": "Sprawdzanie aktualizacji...",
-        "available": "Dostępna aktualizacja",
-        "up_to_date": "Aplikacja jest aktualna",
-        "error": "Błąd sprawdzania aktualizacji",
-        "download": "Pobierz Aktualizację",
-        "installing": "Instalowanie aktualizacji...",
-        "restart_required": "Wymagany restart do ukończenia aktualizacji"
-    },
-    "errors": {
-        "recording_failed": "Nie udało się rozpocząć nagrywania",
-        "playback_failed": "Nie udało się rozpocząć odtwarzania",
-        "save_failed": "Nie udało się zapisać makra",
-        "load_failed": "Nie udało się załadować makra",
-        "delete_failed": "Nie udało się usunąć makra",
-        "settings_failed": "Nie udało się zapisać ustawień",
-        "driver_failed": "Nie udało się zainstalować sterownika",
-        "permission_denied": "Odmowa dostępu",
-        "file_not_found": "Nie znaleziono pliku",
-        "invalid_format": "Nieprawidłowy format pliku",
-        "unknown_error": "Wystąpił nieznany błąd"
-    },
-    "help": {
-        "getting_started": "Pierwsze Kroki",
-        "recording": "Nagrywanie Makr",
-        "playback": "Odtwarzanie Makr",
-        "scripting": "Skrypty Makr",
-        "settings": "Przewodnik Ustawień",
-        "troubleshooting": "Rozwiązywanie Problemów",
-        "about": "O Programie",
-        "support": "Wsparcie",
-        "documentation": "Dokumentacja",
-        "check_updates": "Sprawdź Aktualizacje",
-        "report_bug": "Zgłoś Błąd",
-        "feedback": "Wyślij Opinię"
+        "template": "# Skrypt AuTOMIC MacroTool\n# Utworzono: %s\n\n# Importuj wymagane moduły\nfrom time import sleep\n\n# Twój kod tutaj\n",
+        "api": {
+            "key_press": "Symuluj wejście z klawiatury",
+            "mouse_move": "Przesuń kursor myszy",
+            "mouse_click": "Symuluj przycisk myszy",
+            "mouse_scroll": "Symuluj kółko myszy",
+            "get_window": "Pobierz informacje o oknie",
+            "find_window": "Znajdź okno po tytule",
+            "get_active_window": "Pobierz aktywne okno",
+            "bring_to_front": "Przenieś okno na wierzch",
+            "sleep": "Czekaj określony czas",
+            "log": "Zapisz wiadomość",
+            "debug": "Zapisz wiadomość debugowania",
+            "wait_for_window": "Czekaj na pojawienie się okna",
+            "repeat": "Powtórz akcję wiele razy",
+            "wait_until": "Czekaj aż warunek zostanie spełniony"
+        }
     }
 }

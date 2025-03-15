@@ -1,0 +1,13 @@
+[Unit]
+Description=Git Auto Sync Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/project/sandbox/user-workspace/AuTOMIC_MacroTool
+ExecStart=/bin/bash auto-commit.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
