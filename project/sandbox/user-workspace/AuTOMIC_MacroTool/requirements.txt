@@ -5,22 +5,37 @@ mouse>=0.7.1
 pynput>=1.7.6
 pywin32>=305
 psutil>=5.9.0
-opencv-python>=4.7.0
-numpy>=1.24.0
-requests>=2.31.0
 darkdetect>=0.8.0
+packaging>=23.1
+requests>=2.31.0
 
-# Development dependencies
-pyinstaller>=5.13.0
-black>=23.3.0
-pylint>=2.17.0
-pytest>=7.3.1
-pytest-qt>=4.2.0
-pytest-cov>=4.1.0
+# Input simulation
+interception-python>=1.0.3  # For stealth mode input simulation
+pyautogui>=0.9.54  # Fallback input simulation
 
-# Optional dependencies for stealth mode
-interception-driver>=1.0.1  # Windows only, requires admin rights
+# Window management
+win32gui>=221.6
+win32con>=221.6
+win32api>=221.6
+win32process>=221.6
+
+# Development tools
+pyinstaller>=5.13.0  # For creating standalone executables
+black>=23.3.0  # Code formatting
+flake8>=6.0.0  # Code linting
+mypy>=1.3.0  # Type checking
+pytest>=7.3.1  # Testing
+pytest-cov>=4.1.0  # Test coverage
+pytest-qt>=4.2.0  # Qt testing
 
 # Documentation
 sphinx>=7.0.1
 sphinx-rtd-theme>=1.2.0
+sphinx-autodoc-typehints>=1.23.0
+
+# Optional dependencies
+opencv-python>=4.7.0  # For advanced window detection
+numpy>=1.24.3  # For numerical operations
+pillow>=9.5.0  # For image processing
+pygetwindow>=0.0.9  # Alternative window management
+python-xlib>=0.33  # X11 support for Linux (future)
