@@ -1,24 +1,23 @@
+"""
+Settings dialog for application configuration.
+Copyright (c) 2025 AtomicArk
+"""
+
+import logging
+from typing import Dict, Optional
+from pathlib import Path
 from PyQt6.QtWidgets import (
     QDialog, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
-    QCheckBox, QPushButton, QGroupBox, QFormLayout, QProgressBar,
-    QMessageBox, QFileDialog
+    QLabel, QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox,
+    QComboBox, QPushButton, QFileDialog, QGroupBox, QFormLayout,
+    QMessageBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence
 
-import logging
-import json
-from pathlib import Path
-from typing import Dict, Optional
-import keyboard
-import win32api
-import win32con
-
-from ..core.config_manager import ConfigManager
+from ..core.config_manager import config_manager
 from ..utils.debug_helper import get_debug_helper, DebugLevel
-from ..utils.updater import update_manager
-from .styles import Theme
+from .styles import style_manager, Theme
 
 class HotkeyEdit(QLineEdit):
     """Custom line edit for hotkey capture."""
@@ -26,583 +25,378 @@ class HotkeyEdit(QLineEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setReadOnly(True)
-        self.current_keys = set()
-        self.capturing = False
-
+        self._recording = False
+        self._key_sequence = QKeySequence()
+    
     def keyPressEvent(self, event):
         """Handle key press events."""
-        if self.capturing:
-            key = QKeySequence(event.key()).toString()
-            if key not in self.current_keys:
-                self.current_keys.add(key)
-                self.setText('+'.join(sorted(self.current_keys)))
+        if self._recording:
+            # Convert to key sequence
+            self._key_sequence = QKeySequence(event.key() | int(event.modifiers()))
+            self.setText(self._key_sequence.toString())
+            self._recording = False
             event.accept()
         else:
             super().keyPressEvent(event)
-
-    def keyReleaseEvent(self, event):
-        """Handle key release events."""
-        if self.capturing:
-            key = QKeySequence(event.key()).toString()
-            if key in self.current_keys:
-                self.current_keys.remove(key)
+    
+    def mousePressEvent(self, event):
+        """Handle mouse press events."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._recording = True
+            self.setText("Press key combination...")
             event.accept()
         else:
-            super().keyReleaseEvent(event)
-
-    def focusInEvent(self, event):
-        """Handle focus in event."""
-        super().focusInEvent(event)
-        self.capturing = True
-        self.current_keys.clear()
-        self.setText("Press keys...")
-
-    def focusOutEvent(self, event):
-        """Handle focus out event."""
-        super().focusOutEvent(event)
-        self.capturing = False
-        if not self.current_keys:
-            self.setText(self.placeholderText())
+            super().mousePressEvent(event)
+    
+    def get_hotkey(self) -> str:
+        """Get current hotkey."""
+        return self._key_sequence.toString()
+    
+    def set_hotkey(self, hotkey: str):
+        """Set hotkey."""
+        self._key_sequence = QKeySequence(hotkey)
+        self.setText(self._key_sequence.toString())
 
 class SettingsDialog(QDialog):
     """Application settings dialog."""
     
     settings_changed = pyqtSignal()
     
-    def __init__(self, config_manager: ConfigManager, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.config_manager = config_manager
         self.logger = logging.getLogger('SettingsDialog')
         self.debug = get_debug_helper()
+        
+        self.setWindowTitle("Settings")
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(400)
+        
+        # Initialize UI
         self._init_ui()
         self._load_settings()
 
     def _init_ui(self):
         """Initialize user interface."""
-        self.setWindowTitle("Settings")
-        self.setMinimumWidth(600)
-        
         layout = QVBoxLayout(self)
         
-        # Create tab widget
-        self.tab_widget = QTabWidget()
-        layout.addWidget(self.tab_widget)
+        # Tab widget
+        tabs = QTabWidget()
+        layout.addWidget(tabs)
         
-        # Create tabs
-        self._create_general_tab()
-        self._create_recording_tab()
-        self._create_playback_tab()
-        self._create_hotkeys_tab()
-        self._create_advanced_tab()
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        
-        self.apply_button = QPushButton("Apply")
-        self.apply_button.clicked.connect(self._apply_settings)
-        
-        self.ok_button = QPushButton("OK")
-        self.ok_button.clicked.connect(self.accept)
-        
-        self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.clicked.connect(self.reject)
-        
-        button_layout.addWidget(self.apply_button)
-        button_layout.addWidget(self.ok_button)
-        button_layout.addWidget(self.cancel_button)
-        
-        layout.addLayout(button_layout)
-
-    def _create_general_tab(self):
-        """Create general settings tab."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
+        # General tab
+        general_tab = QWidget()
+        general_layout = QVBoxLayout(general_tab)
         
         # Language group
-        lang_group = QGroupBox("Language")
-        lang_layout = QFormLayout(lang_group)
-        
+        language_group = QGroupBox("Language")
+        language_layout = QFormLayout()
         self.language_combo = QComboBox()
-        self.language_combo.addItems(['English', 'Polish', 'German', 'French', 'Italian', 'Spanish'])
-        lang_layout.addRow("Interface Language:", self.language_combo)
+        self.language_combo.addItems(['System', 'English', 'Polish', 'German',
+                                    'French', 'Italian', 'Spanish'])
+        language_layout.addRow("Interface Language:", self.language_combo)
+        language_group.setLayout(language_layout)
+        general_layout.addWidget(language_group)
         
-        layout.addWidget(lang_group)
-        
-        # Appearance group
-        appearance_group = QGroupBox("Appearance")
-        appearance_layout = QFormLayout(appearance_group)
-        
+        # Theme group
+        theme_group = QGroupBox("Appearance")
+        theme_layout = QFormLayout()
         self.theme_combo = QComboBox()
         self.theme_combo.addItems([t.value for t in Theme])
-        appearance_layout.addRow("Theme:", self.theme_combo)
-        
-        self.scale_spin = QDoubleSpinBox()
-        self.scale_spin.setRange(0.5, 2.0)
-        self.scale_spin.setSingleStep(0.1)
-        appearance_layout.addRow("UI Scale:", self.scale_spin)
-        
-        layout.addWidget(appearance_group)
+        theme_layout.addRow("Theme:", self.theme_combo)
+        self.ui_scale_spin = QDoubleSpinBox()
+        self.ui_scale_spin.setRange(0.5, 2.0)
+        self.ui_scale_spin.setSingleStep(0.1)
+        theme_layout.addRow("UI Scale:", self.ui_scale_spin)
+        theme_group.setLayout(theme_layout)
+        general_layout.addWidget(theme_group)
         
         # Startup group
         startup_group = QGroupBox("Startup")
-        startup_layout = QFormLayout(startup_group)
-        
+        startup_layout = QVBoxLayout()
         self.autostart_check = QCheckBox("Start with Windows")
-        startup_layout.addRow(self.autostart_check)
+        self.minimize_check = QCheckBox("Start minimized to tray")
+        self.updates_check = QCheckBox("Check for updates")
+        startup_layout.addWidget(self.autostart_check)
+        startup_layout.addWidget(self.minimize_check)
+        startup_layout.addWidget(self.updates_check)
+        startup_group.setLayout(startup_layout)
+        general_layout.addWidget(startup_group)
         
-        self.minimize_check = QCheckBox("Start minimized")
-        startup_layout.addRow(self.minimize_check)
+        tabs.addTab(general_tab, "General")
         
-        layout.addWidget(startup_group)
-        
-        # Updates group
-        updates_group = QGroupBox("Updates")
-        updates_layout = QFormLayout(updates_group)
-        
-        self.check_updates_check = QCheckBox("Check for updates automatically")
-        updates_layout.addRow(self.check_updates_check)
-        
-        self.check_now_button = QPushButton("Check Now")
-        self.check_now_button.clicked.connect(self._check_updates)
-        updates_layout.addRow(self.check_now_button)
-        
-        layout.addWidget(updates_group)
-        
-        layout.addStretch()
-        self.tab_widget.addTab(tab, "General")
-
-    def _create_recording_tab(self):
-        """Create recording settings tab."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
+        # Recording tab
+        recording_tab = QWidget()
+        recording_layout = QVBoxLayout(recording_tab)
         
         # Input group
-        input_group = QGroupBox("Input Recording")
-        input_layout = QFormLayout(input_group)
+        input_group = QGroupBox("Input")
+        input_layout = QVBoxLayout()
+        self.mouse_check = QCheckBox("Record mouse")
+        self.keyboard_check = QCheckBox("Record keyboard")
+        self.delays_check = QCheckBox("Record delays")
+        input_layout.addWidget(self.mouse_check)
+        input_layout.addWidget(self.keyboard_check)
+        input_layout.addWidget(self.delays_check)
+        input_group.setLayout(input_layout)
+        recording_layout.addWidget(input_group)
         
-        self.record_mouse_check = QCheckBox("Record mouse movements")
-        input_layout.addRow(self.record_mouse_check)
+        # Mode group
+        mode_group = QGroupBox("Recording Mode")
+        mode_layout = QVBoxLayout()
+        self.window_mode_check = QCheckBox("Window mode")
+        self.directx_mode_check = QCheckBox("DirectX mode")
+        mode_layout.addWidget(self.window_mode_check)
+        mode_layout.addWidget(self.directx_mode_check)
+        mode_group.setLayout(mode_layout)
+        recording_layout.addWidget(mode_group)
         
-        self.record_keyboard_check = QCheckBox("Record keyboard input")
-        input_layout.addRow(self.record_keyboard_check)
+        tabs.addTab(recording_tab, "Recording")
         
-        self.record_delays_check = QCheckBox("Record delays")
-        input_layout.addRow(self.record_delays_check)
-        
-        self.min_delay_spin = QDoubleSpinBox()
-        self.min_delay_spin.setRange(0.01, 1.0)
-        self.min_delay_spin.setSingleStep(0.01)
-        input_layout.addRow("Minimum Delay (s):", self.min_delay_spin)
-        
-        layout.addWidget(input_group)
-        
-        # Window group
-        window_group = QGroupBox("Window Detection")
-        window_layout = QFormLayout(window_group)
-        
-        self.window_mode_combo = QComboBox()
-        self.window_mode_combo.addItems(['Auto', 'Manual', 'Fullscreen'])
-        window_layout.addRow("Detection Mode:", self.window_mode_combo)
-        
-        layout.addWidget(window_group)
-        
-        # Storage group
-        storage_group = QGroupBox("Storage")
-        storage_layout = QFormLayout(storage_group)
-        
-        self.macro_dir_edit = QLineEdit()
-        self.macro_dir_edit.setReadOnly(True)
-        
-        browse_button = QPushButton("Browse...")
-        browse_button.clicked.connect(self._browse_macro_dir)
-        
-        dir_layout = QHBoxLayout()
-        dir_layout.addWidget(self.macro_dir_edit)
-        dir_layout.addWidget(browse_button)
-        
-        storage_layout.addRow("Macro Directory:", dir_layout)
-        
-        layout.addWidget(storage_group)
-        
-        layout.addStretch()
-        self.tab_widget.addTab(tab, "Recording")
-
-    def _create_playback_tab(self):
-        """Create playback settings tab."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
+        # Playback tab
+        playback_tab = QWidget()
+        playback_layout = QVBoxLayout(playback_tab)
         
         # Playback group
         playback_group = QGroupBox("Playback")
-        playback_layout = QFormLayout(playback_group)
-        
-        self.playback_mode_combo = QComboBox()
-        self.playback_mode_combo.addItems(['Once', 'Loop', 'Count'])
-        playback_layout.addRow("Default Mode:", self.playback_mode_combo)
-        
-        self.repeat_count_spin = QSpinBox()
-        self.repeat_count_spin.setRange(1, 9999)
-        playback_layout.addRow("Repeat Count:", self.repeat_count_spin)
-        
-        layout.addWidget(playback_group)
-        
-        # Timing group
-        timing_group = QGroupBox("Timing")
-        timing_layout = QFormLayout(timing_group)
-        
+        playback_form = QFormLayout()
+        self.repeat_combo = QComboBox()
+        self.repeat_combo.addItems(['Once', 'Loop', 'Count'])
+        playback_form.addRow("Repeat Mode:", self.repeat_combo)
+        self.repeat_spin = QSpinBox()
+        self.repeat_spin.setRange(1, 9999)
+        playback_form.addRow("Repeat Count:", self.repeat_spin)
         self.speed_spin = QDoubleSpinBox()
         self.speed_spin.setRange(0.1, 10.0)
         self.speed_spin.setSingleStep(0.1)
-        timing_layout.addRow("Default Speed:", self.speed_spin)
+        playback_form.addRow("Speed:", self.speed_spin)
+        playback_group.setLayout(playback_form)
+        playback_layout.addWidget(playback_group)
         
-        self.randomize_delays_check = QCheckBox("Randomize delays")
-        timing_layout.addRow(self.randomize_delays_check)
-        
-        self.random_factor_spin = QDoubleSpinBox()
-        self.random_factor_spin.setRange(0.0, 1.0)
-        self.random_factor_spin.setSingleStep(0.1)
-        timing_layout.addRow("Random Factor:", self.random_factor_spin)
-        
-        layout.addWidget(timing_group)
-        
-        # Safety group
-        safety_group = QGroupBox("Safety")
-        safety_layout = QFormLayout(safety_group)
-        
-        self.stop_on_input_check = QCheckBox("Stop on user input")
-        safety_layout.addRow(self.stop_on_input_check)
-        
+        # Options group
+        options_group = QGroupBox("Options")
+        options_layout = QVBoxLayout()
+        self.randomize_check = QCheckBox("Randomize delays")
+        self.stop_input_check = QCheckBox("Stop on input")
         self.restore_mouse_check = QCheckBox("Restore mouse position")
-        safety_layout.addRow(self.restore_mouse_check)
+        self.stealth_check = QCheckBox("Stealth mode")
+        options_layout.addWidget(self.randomize_check)
+        options_layout.addWidget(self.stop_input_check)
+        options_layout.addWidget(self.restore_mouse_check)
+        options_layout.addWidget(self.stealth_check)
+        options_group.setLayout(options_layout)
+        playback_layout.addWidget(options_group)
         
-        layout.addWidget(safety_group)
+        tabs.addTab(playback_tab, "Playback")
         
-        # Stealth group
-        stealth_group = QGroupBox("Stealth Mode")
-        stealth_layout = QFormLayout(stealth_group)
+        # Hotkeys tab
+        hotkeys_tab = QWidget()
+        hotkeys_layout = QFormLayout(hotkeys_tab)
         
-        self.stealth_mode_check = QCheckBox("Enable stealth mode")
-        stealth_layout.addRow(self.stealth_mode_check)
+        self.hotkey_edits = {}
+        for action in ['record_start', 'record_stop', 'play_start', 'play_stop',
+                      'play_pause', 'script_execute', 'script_stop', 'panic_button',
+                      'show_hide']:
+            edit = HotkeyEdit()
+            self.hotkey_edits[action] = edit
+            hotkeys_layout.addRow(action.replace('_', ' ').title() + ":", edit)
         
-        self.install_driver_button = QPushButton("Install Interception Driver")
-        self.install_driver_button.clicked.connect(self._install_driver)
-        stealth_layout.addRow(self.install_driver_button)
+        tabs.addTab(hotkeys_tab, "Hotkeys")
         
-        self.driver_progress = QProgressBar()
-        self.driver_progress.hide()
-        stealth_layout.addRow(self.driver_progress)
-        
-        layout.addWidget(stealth_group)
-        
-        layout.addStretch()
-        self.tab_widget.addTab(tab, "Playback")
-
-    def _create_hotkeys_tab(self):
-        """Create hotkeys settings tab."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        
-        # Global hotkeys group
-        global_group = QGroupBox("Global Hotkeys")
-        global_layout = QFormLayout(global_group)
-        
-        self.panic_hotkey = HotkeyEdit()
-        global_layout.addRow("Panic Button:", self.panic_hotkey)
-        
-        layout.addWidget(global_group)
-        
-        # Macro hotkeys group
-        macro_group = QGroupBox("Macro Hotkeys")
-        macro_layout = QFormLayout(macro_group)
-        
-        self.macro_hotkeys = []
-        for i in range(6):
-            hotkey = HotkeyEdit()
-            macro_layout.addRow(f"Macro {i+1}:", hotkey)
-            self.macro_hotkeys.append(hotkey)
-        
-        layout.addWidget(macro_group)
-        
-        # Action hotkeys group
-        action_group = QGroupBox("Action Hotkeys")
-        action_layout = QFormLayout(action_group)
-        
-        self.record_hotkey = HotkeyEdit()
-        action_layout.addRow("Start/Stop Recording:", self.record_hotkey)
-        
-        self.play_hotkey = HotkeyEdit()
-        action_layout.addRow("Play/Pause:", self.play_hotkey)
-        
-        layout.addWidget(action_group)
-        
-        layout.addStretch()
-        self.tab_widget.addTab(tab, "Hotkeys")
-
-    def _create_advanced_tab(self):
-        """Create advanced settings tab."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
+        # Advanced tab
+        advanced_tab = QWidget()
+        advanced_layout = QVBoxLayout(advanced_tab)
         
         # Debug group
-        debug_group = QGroupBox("Debugging")
-        debug_layout = QFormLayout(debug_group)
-        
-        self.debug_level_combo = QComboBox()
-        self.debug_level_combo.addItems([level.name for level in DebugLevel])
-        debug_layout.addRow("Debug Level:", self.debug_level_combo)
-        
-        self.open_logs_button = QPushButton("Open Log Directory")
-        self.open_logs_button.clicked.connect(self._open_logs)
-        debug_layout.addRow(self.open_logs_button)
-        
-        layout.addWidget(debug_group)
+        debug_group = QGroupBox("Debug")
+        debug_layout = QFormLayout()
+        self.debug_combo = QComboBox()
+        self.debug_combo.addItems(['None', 'Basic', 'Detailed', 'Verbose'])
+        debug_layout.addRow("Debug Level:", self.debug_combo)
+        debug_group.setLayout(debug_layout)
+        advanced_layout.addWidget(debug_group)
         
         # Performance group
         perf_group = QGroupBox("Performance")
-        perf_layout = QFormLayout(perf_group)
+        perf_layout = QVBoxLayout()
+        self.performance_check = QCheckBox("Performance mode")
+        perf_layout.addWidget(self.performance_check)
+        perf_group.setLayout(perf_layout)
+        advanced_layout.addWidget(perf_group)
         
-        self.performance_mode_check = QCheckBox("Enable performance mode")
-        perf_layout.addRow(self.performance_mode_check)
+        # Directories group
+        dir_group = QGroupBox("Directories")
+        dir_layout = QFormLayout()
         
-        layout.addWidget(perf_group)
+        self.macro_dir_edit = QLineEdit()
+        macro_dir_btn = QPushButton("Browse...")
+        macro_dir_layout = QHBoxLayout()
+        macro_dir_layout.addWidget(self.macro_dir_edit)
+        macro_dir_layout.addWidget(macro_dir_btn)
+        dir_layout.addRow("Macro Directory:", macro_dir_layout)
         
-        # Reset group
-        reset_group = QGroupBox("Reset")
-        reset_layout = QVBoxLayout(reset_group)
+        self.backup_dir_edit = QLineEdit()
+        backup_dir_btn = QPushButton("Browse...")
+        backup_dir_layout = QHBoxLayout()
+        backup_dir_layout.addWidget(self.backup_dir_edit)
+        backup_dir_layout.addWidget(backup_dir_btn)
+        dir_layout.addRow("Backup Directory:", backup_dir_layout)
         
-        self.reset_button = QPushButton("Reset All Settings")
-        self.reset_button.clicked.connect(self._reset_settings)
-        reset_layout.addWidget(self.reset_button)
+        dir_group.setLayout(dir_layout)
+        advanced_layout.addWidget(dir_group)
         
-        layout.addWidget(reset_group)
+        tabs.addTab(advanced_tab, "Advanced")
         
-        layout.addStretch()
-        self.tab_widget.addTab(tab, "Advanced")
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        reset_btn = QPushButton("Reset")
+        reset_btn.clicked.connect(self._reset_settings)
+        button_layout.addWidget(reset_btn)
+        
+        ok_btn = QPushButton("OK")
+        ok_btn.clicked.connect(self.accept)
+        button_layout.addWidget(ok_btn)
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        layout.addLayout(button_layout)
 
     def _load_settings(self):
         """Load current settings."""
         try:
-            config = self.config_manager.config
-            
             # General
-            self.language_combo.setCurrentText(config.language)
-            self.theme_combo.setCurrentText(config.theme.value)
-            self.scale_spin.setValue(config.ui_scale)
-            self.autostart_check.setChecked(config.autostart)
-            self.minimize_check.setChecked(config.minimize_to_tray)
-            self.check_updates_check.setChecked(config.check_updates)
+            self.language_combo.setCurrentText(
+                config_manager.config.language or 'System'
+            )
+            self.theme_combo.setCurrentText(
+                config_manager.config.theme or 'System'
+            )
+            self.ui_scale_spin.setValue(config_manager.config.ui_scale)
+            self.autostart_check.setChecked(config_manager.config.autostart)
+            self.minimize_check.setChecked(config_manager.config.minimize_to_tray)
+            self.updates_check.setChecked(config_manager.config.check_updates)
             
             # Recording
-            self.record_mouse_check.setChecked(config.record_mouse)
-            self.record_keyboard_check.setChecked(config.record_keyboard)
-            self.record_delays_check.setChecked(config.record_delays)
-            self.min_delay_spin.setValue(config.min_delay)
-            self.window_mode_combo.setCurrentText(config.window_mode)
-            self.macro_dir_edit.setText(str(config.macro_directory))
+            self.mouse_check.setChecked(config_manager.config.recording.record_mouse)
+            self.keyboard_check.setChecked(config_manager.config.recording.record_keyboard)
+            self.delays_check.setChecked(config_manager.config.recording.record_delays)
+            self.window_mode_check.setChecked(config_manager.config.recording.window_mode)
+            self.directx_mode_check.setChecked(config_manager.config.recording.directx_mode)
             
             # Playback
-            self.playback_mode_combo.setCurrentText(config.default_playback_mode.value)
-            self.repeat_count_spin.setValue(config.repeat_count)
-            self.speed_spin.setValue(config.default_speed)
-            self.randomize_delays_check.setChecked(config.randomize_delays)
-            self.random_factor_spin.setValue(config.random_factor)
-            self.stop_on_input_check.setChecked(config.stop_on_input)
-            self.restore_mouse_check.setChecked(config.restore_mouse)
-            self.stealth_mode_check.setChecked(config.stealth_mode)
+            self.repeat_combo.setCurrentText(
+                config_manager.config.playback.repeat_mode.title()
+            )
+            self.repeat_spin.setValue(config_manager.config.playback.repeat_count)
+            self.speed_spin.setValue(config_manager.config.playback.speed)
+            self.randomize_check.setChecked(config_manager.config.playback.randomize_delays)
+            self.stop_input_check.setChecked(config_manager.config.playback.stop_on_input)
+            self.restore_mouse_check.setChecked(config_manager.config.playback.restore_mouse)
+            self.stealth_check.setChecked(config_manager.config.playback.stealth_mode)
             
             # Hotkeys
-            self.panic_hotkey.setText(config.panic_hotkey)
-            for i, hotkey in enumerate(self.macro_hotkeys):
-                hotkey.setText(config.macro_hotkeys.get(i, ""))
-            self.record_hotkey.setText(config.record_hotkey)
-            self.play_hotkey.setText(config.play_hotkey)
+            for action, edit in self.hotkey_edits.items():
+                edit.set_hotkey(getattr(config_manager.config.hotkeys, action))
             
             # Advanced
-            self.debug_level_combo.setCurrentText(config.debug_level.name)
-            self.performance_mode_check.setChecked(config.performance_mode)
+            self.debug_combo.setCurrentText(
+                config_manager.config.debug_level.title()
+            )
+            self.performance_check.setChecked(config_manager.config.performance_mode)
+            self.macro_dir_edit.setText(config_manager.config.macro_directory)
+            self.backup_dir_edit.setText(config_manager.config.backup_directory)
             
         except Exception as e:
-            self.logger.error(f"Error loading settings: {e}")
-            QMessageBox.warning(
-                self,
-                "Settings Error",
-                "Failed to load settings. Using defaults."
-            )
+            self.logger.error(f"Failed to load settings: {e}")
 
-    def _apply_settings(self):
-        """Apply current settings."""
+    def _save_settings(self):
+        """Save current settings."""
         try:
-            config = self.config_manager.config
-            
             # General
-            config.language = self.language_combo.currentText()
-            config.theme = Theme(self.theme_combo.currentText())
-            config.ui_scale = self.scale_spin.value()
-            config.autostart = self.autostart_check.isChecked()
-            config.minimize_to_tray = self.minimize_check.isChecked()
-            config.check_updates = self.check_updates_check.isChecked()
+            config_manager.config.language = self.language_combo.currentText()
+            if config_manager.config.language == 'System':
+                config_manager.config.language = ''
+            
+            config_manager.config.theme = self.theme_combo.currentText()
+            if config_manager.config.theme == 'System':
+                config_manager.config.theme = ''
+            
+            config_manager.config.ui_scale = self.ui_scale_spin.value()
+            config_manager.config.autostart = self.autostart_check.isChecked()
+            config_manager.config.minimize_to_tray = self.minimize_check.isChecked()
+            config_manager.config.check_updates = self.updates_check.isChecked()
             
             # Recording
-            config.record_mouse = self.record_mouse_check.isChecked()
-            config.record_keyboard = self.record_keyboard_check.isChecked()
-            config.record_delays = self.record_delays_check.isChecked()
-            config.min_delay = self.min_delay_spin.value()
-            config.window_mode = self.window_mode_combo.currentText()
-            config.macro_directory = Path(self.macro_dir_edit.text())
+            config_manager.config.recording.record_mouse = self.mouse_check.isChecked()
+            config_manager.config.recording.record_keyboard = self.keyboard_check.isChecked()
+            config_manager.config.recording.record_delays = self.delays_check.isChecked()
+            config_manager.config.recording.window_mode = self.window_mode_check.isChecked()
+            config_manager.config.recording.directx_mode = self.directx_mode_check.isChecked()
             
             # Playback
-            config.default_playback_mode = self.playback_mode_combo.currentText()
-            config.repeat_count = self.repeat_count_spin.value()
-            config.default_speed = self.speed_spin.value()
-            config.randomize_delays = self.randomize_delays_check.isChecked()
-            config.random_factor = self.random_factor_spin.value()
-            config.stop_on_input = self.stop_on_input_check.isChecked()
-            config.restore_mouse = self.restore_mouse_check.isChecked()
-            config.stealth_mode = self.stealth_mode_check.isChecked()
+            config_manager.config.playback.repeat_mode = self.repeat_combo.currentText().lower()
+            config_manager.config.playback.repeat_count = self.repeat_spin.value()
+            config_manager.config.playback.speed = self.speed_spin.value()
+            config_manager.config.playback.randomize_delays = self.randomize_check.isChecked()
+            config_manager.config.playback.stop_on_input = self.stop_input_check.isChecked()
+            config_manager.config.playback.restore_mouse = self.restore_mouse_check.isChecked()
+            config_manager.config.playback.stealth_mode = self.stealth_check.isChecked()
             
             # Hotkeys
-            config.panic_hotkey = self.panic_hotkey.text()
-            config.macro_hotkeys = {
-                i: hotkey.text()
-                for i, hotkey in enumerate(self.macro_hotkeys)
-                if hotkey.text()
-            }
-            config.record_hotkey = self.record_hotkey.text()
-            config.play_hotkey = self.play_hotkey.text()
+            for action, edit in self.hotkey_edits.items():
+                setattr(config_manager.config.hotkeys, action, edit.get_hotkey())
             
             # Advanced
-            config.debug_level = DebugLevel[self.debug_level_combo.currentText()]
-            config.performance_mode = self.performance_mode_check.isChecked()
+            config_manager.config.debug_level = self.debug_combo.currentText().lower()
+            config_manager.config.performance_mode = self.performance_check.isChecked()
+            config_manager.config.macro_directory = self.macro_dir_edit.text()
+            config_manager.config.backup_directory = self.backup_dir_edit.text()
             
-            # Save changes
-            self.config_manager.save_config()
-            self.settings_changed.emit()
-            
-            QMessageBox.information(
-                self,
-                "Settings",
-                "Settings applied successfully."
-            )
+            # Save config
+            if config_manager.save_config():
+                self.settings_changed.emit()
+                return True
+            return False
             
         except Exception as e:
-            self.logger.error(f"Error applying settings: {e}")
-            QMessageBox.critical(
-                self,
-                "Settings Error",
-                f"Failed to apply settings: {e}"
-            )
-
-    def _browse_macro_dir(self):
-        """Browse for macro directory."""
-        try:
-            directory = QFileDialog.getExistingDirectory(
-                self,
-                "Select Macro Directory",
-                str(self.config_manager.config.macro_directory)
-            )
-            if directory:
-                self.macro_dir_edit.setText(directory)
-            
-        except Exception as e:
-            self.logger.error(f"Error browsing directory: {e}")
-
-    def _check_updates(self):
-        """Check for updates."""
-        try:
-            self.check_now_button.setEnabled(False)
-            update_manager.check_for_updates(force=True)
-            self.check_now_button.setEnabled(True)
-            
-        except Exception as e:
-            self.logger.error(f"Error checking updates: {e}")
-            self.check_now_button.setEnabled(True)
-
-    def _install_driver(self):
-        """Install Interception driver."""
-        try:
-            reply = QMessageBox.question(
-                self,
-                "Install Driver",
-                "This will install the Interception driver for stealth mode.\n"
-                "Administrator rights are required.\n\n"
-                "Do you want to continue?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            
-            if reply == QMessageBox.StandardButton.Yes:
-                self.driver_progress.show()
-                self.install_driver_button.setEnabled(False)
-                
-                def progress_callback(value):
-                    self.driver_progress.setValue(value)
-                    if value >= 100:
-                        self.driver_progress.hide()
-                        self.install_driver_button.setEnabled(True)
-                        QMessageBox.information(
-                            self,
-                            "Driver Installation",
-                            "Driver installed successfully."
-                        )
-                
-                update_manager.install_interception(progress_callback)
-            
-        except Exception as e:
-            self.logger.error(f"Error installing driver: {e}")
-            self.driver_progress.hide()
-            self.install_driver_button.setEnabled(True)
-            QMessageBox.critical(
-                self,
-                "Installation Error",
-                f"Failed to install driver: {e}"
-            )
-
-    def _open_logs(self):
-        """Open log directory."""
-        try:
-            path = self.debug.log_dir
-            if path.exists():
-                os.startfile(str(path))
-            else:
-                QMessageBox.warning(
-                    self,
-                    "Logs",
-                    "Log directory does not exist."
-                )
-            
-        except Exception as e:
-            self.logger.error(f"Error opening logs: {e}")
+            self.logger.error(f"Failed to save settings: {e}")
+            return False
 
     def _reset_settings(self):
-        """Reset all settings to defaults."""
+        """Reset settings to defaults."""
         try:
             reply = QMessageBox.question(
                 self,
                 "Reset Settings",
-                "This will reset all settings to their default values.\n"
-                "Are you sure you want to continue?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                "Are you sure you want to reset all settings to defaults?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
             )
             
             if reply == QMessageBox.StandardButton.Yes:
-                self.config_manager.reset_config()
-                self._load_settings()
-                self.settings_changed.emit()
-                
-                QMessageBox.information(
-                    self,
-                    "Reset Settings",
-                    "Settings have been reset to defaults."
-                )
+                if config_manager.reset_config():
+                    self._load_settings()
+                    self.settings_changed.emit()
+                else:
+                    QMessageBox.warning(
+                        self,
+                        "Error",
+                        "Failed to reset settings"
+                    )
             
         except Exception as e:
-            self.logger.error(f"Error resetting settings: {e}")
-            QMessageBox.critical(
-                self,
-                "Reset Error",
-                f"Failed to reset settings: {e}"
-            )
+            self.logger.error(f"Failed to reset settings: {e}")
 
     def accept(self):
         """Handle dialog acceptance."""
-        self._apply_settings()
-        super().accept()
+        if self._save_settings():
+            super().accept()
+        else:
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Failed to save settings"
+            )
