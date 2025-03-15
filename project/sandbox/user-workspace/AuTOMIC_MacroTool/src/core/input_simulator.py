@@ -1,387 +1,364 @@
 """
-Input simulation module with stealth mode support.
+Input simulation module.
+Copyright (c) 2025 AtomicArk
 """
 
 import logging
-import time
 import threading
-from typing import Optional, Tuple, List, Dict
-from enum import Enum, auto
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
+from enum import Enum, auto
+import time
 import ctypes
 import win32api
 import win32con
-import win32gui
 import keyboard
 import mouse
 from pynput import keyboard as pynput_keyboard
 from pynput import mouse as pynput_mouse
 
 from ..utils.debug_helper import get_debug_helper
-from .window_manager import window_manager
+from ..core.config_manager import config_manager
 
-class InputMode(Enum):
-    """Input simulation modes."""
-    NORMAL = auto()  # Standard Windows API
-    STEALTH = auto()  # Hardware-level simulation
+class InputType(Enum):
+    """Input event types."""
+    KEYBOARD = auto()
+    MOUSE_MOVE = auto()
+    MOUSE_CLICK = auto()
+    MOUSE_SCROLL = auto()
+    MOUSE_DRAG = auto()
+
+class MouseButton(Enum):
+    """Mouse button types."""
+    LEFT = auto()
+    RIGHT = auto()
+    MIDDLE = auto()
 
 @dataclass
 class InputEvent:
     """Input event container."""
-    type: str  # 'keyboard' or 'mouse'
-    action: str  # 'press', 'release', 'move', 'click', 'scroll'
-    data: Dict  # Event-specific data
+    type: InputType
     timestamp: float
-    window_info: Optional[Dict] = None  # Window context
+    data: Dict
+    window_handle: Optional[int] = None
+    window_title: Optional[str] = None
+    relative_pos: Optional[Tuple[float, float]] = None
 
-class InputSimulator:
-    """Manages input simulation with stealth mode support."""
+class StealthMode:
+    """Stealth mode input simulation using Interception driver."""
     
     def __init__(self):
-        self.logger = logging.getLogger('InputSimulator')
-        self.debug = get_debug_helper()
+        self.logger = logging.getLogger('StealthMode')
+        self._initialized = False
         
-        # State
-        self.mode = InputMode.NORMAL
-        self._interception_loaded = False
-        self._stop_flag = threading.Event()
-        self._lock = threading.Lock()
-        
-        # Input state tracking
-        self._pressed_keys: set = set()
-        self._mouse_position: Tuple[int, int] = (0, 0)
-        self._mouse_buttons: Dict[str, bool] = {
-            'left': False,
-            'right': False,
-            'middle': False
-        }
-        
-        # Initialize
-        self._init_input_hooks()
-
-    def _init_input_hooks(self):
-        """Initialize input monitoring hooks."""
         try:
-            # Keyboard hook
-            self._keyboard_listener = pynput_keyboard.Listener(
-                on_press=self._on_key_press,
-                on_release=self._on_key_release
+            import interception
+            self._interception = interception.Interception()
+            self._initialized = True
+        except Exception as e:
+            self.logger.error(f"Failed to initialize stealth mode: {e}")
+
+    def is_available(self) -> bool:
+        """Check if stealth mode is available."""
+        return self._initialized
+
+    def send_keyboard(self, scan_code: int, key_down: bool) -> bool:
+        """Send keyboard input."""
+        try:
+            if not self._initialized:
+                return False
+            
+            stroke = self._interception.KeyStroke(
+                code=scan_code,
+                state=1 if key_down else 0
             )
-            self._keyboard_listener.start()
+            return self._interception.send(stroke)
             
-            # Mouse hook
-            self._mouse_listener = pynput_mouse.Listener(
-                on_move=self._on_mouse_move,
-                on_click=self._on_mouse_click,
-                on_scroll=self._on_mouse_scroll
+        except Exception as e:
+            self.logger.error(f"Failed to send keyboard input: {e}")
+            return False
+
+    def send_mouse(self, x: int, y: int, buttons: int = 0,
+                  wheel: int = 0) -> bool:
+        """Send mouse input."""
+        try:
+            if not self._initialized:
+                return False
+            
+            stroke = self._interception.MouseStroke(
+                x=x,
+                y=y,
+                state=buttons,
+                rolling=wheel
             )
-            self._mouse_listener.start()
+            return self._interception.send(stroke)
             
         except Exception as e:
-            self.logger.error(f"Failed to initialize input hooks: {e}")
+            self.logger.error(f"Failed to send mouse input: {e}")
+            return False
 
-    def _on_key_press(self, key):
-        """Handle key press events."""
-        try:
-            with self._lock:
-                if hasattr(key, 'vk'):
-                    self._pressed_keys.add(key.vk)
-                elif hasattr(key, 'char'):
-                    self._pressed_keys.add(ord(key.char))
-        except Exception as e:
-            self.logger.error(f"Error in key press handler: {e}")
+class InputSimulator:
+    """Simulates keyboard and mouse input."""
+    
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
 
-    def _on_key_release(self, key):
-        """Handle key release events."""
-        try:
-            with self._lock:
-                if hasattr(key, 'vk'):
-                    self._pressed_keys.discard(key.vk)
-                elif hasattr(key, 'char'):
-                    self._pressed_keys.discard(ord(key.char))
-        except Exception as e:
-            self.logger.error(f"Error in key release handler: {e}")
-
-    def _on_mouse_move(self, x, y):
-        """Handle mouse move events."""
-        try:
-            with self._lock:
-                self._mouse_position = (x, y)
-        except Exception as e:
-            self.logger.error(f"Error in mouse move handler: {e}")
-
-    def _on_mouse_click(self, x, y, button, pressed):
-        """Handle mouse click events."""
-        try:
-            with self._lock:
-                self._mouse_position = (x, y)
-                button_name = button.name.lower()
-                if button_name in self._mouse_buttons:
-                    self._mouse_buttons[button_name] = pressed
-        except Exception as e:
-            self.logger.error(f"Error in mouse click handler: {e}")
-
-    def _on_mouse_scroll(self, x, y, dx, dy):
-        """Handle mouse scroll events."""
-        try:
-            with self._lock:
-                self._mouse_position = (x, y)
-        except Exception as e:
-            self.logger.error(f"Error in mouse scroll handler: {e}")
-
-    def set_mode(self, mode: InputMode) -> bool:
-        """Set input simulation mode."""
-        try:
-            if mode == InputMode.STEALTH and not self._interception_loaded:
-                if not self._load_interception():
-                    return False
+    def __init__(self):
+        if not hasattr(self, '_initialized'):
+            self.logger = logging.getLogger('InputSimulator')
+            self.debug = get_debug_helper()
             
-            self.mode = mode
+            # State
+            self._stealth_mode = StealthMode()
+            self._use_stealth = False
+            self._last_pos: Optional[Tuple[int, int]] = None
+            self._pressed_keys: Dict[str, bool] = {}
+            self._pressed_buttons: Dict[MouseButton, bool] = {}
+            
+            # Initialize
+            self._initialized = True
+
+    def set_stealth_mode(self, enabled: bool) -> bool:
+        """Enable/disable stealth mode."""
+        try:
+            if enabled and not self._stealth_mode.is_available():
+                self.logger.warning("Stealth mode not available")
+                return False
+            
+            self._use_stealth = enabled
             return True
             
         except Exception as e:
-            self.logger.error(f"Error setting input mode: {e}")
+            self.logger.error(f"Failed to set stealth mode: {e}")
             return False
 
-    def _load_interception(self) -> bool:
-        """Load Interception driver."""
+    def key_press(self, key: str, duration: Optional[float] = None) -> bool:
+        """Simulate key press."""
         try:
-            # Try to load Interception DLL
-            try:
-                self._interception = ctypes.CDLL('interception.dll')
-                self._interception_loaded = True
-                self.logger.info("Interception driver loaded")
-                return True
-            except:
-                self.logger.warning("Interception driver not available")
-                return False
+            if self._use_stealth:
+                # Convert key to scan code
+                scan_code = keyboard.key_to_scan_codes(key)[0]
+                
+                # Press key
+                if not self._stealth_mode.send_keyboard(scan_code, True):
+                    return False
+                
+                # Hold if duration specified
+                if duration:
+                    time.sleep(duration)
+                
+                # Release key
+                return self._stealth_mode.send_keyboard(scan_code, False)
             
-        except Exception as e:
-            self.logger.error(f"Error loading Interception: {e}")
-            return False
-
-    def simulate_key(self, key: str, press: bool = True):
-        """Simulate keyboard input."""
-        try:
-            if self.mode == InputMode.STEALTH and self._interception_loaded:
-                self._simulate_key_stealth(key, press)
             else:
-                self._simulate_key_normal(key, press)
+                keyboard.press(key)
+                if duration:
+                    time.sleep(duration)
+                keyboard.release(key)
+                return True
             
         except Exception as e:
-            self.logger.error(f"Error simulating key: {e}")
+            self.logger.error(f"Failed to simulate key press: {e}")
+            return False
 
-    def _simulate_key_normal(self, key: str, press: bool):
-        """Simulate keyboard input using standard API."""
+    def key_down(self, key: str) -> bool:
+        """Simulate key down."""
         try:
-            if press:
+            if key in self._pressed_keys and self._pressed_keys[key]:
+                return True
+            
+            if self._use_stealth:
+                scan_code = keyboard.key_to_scan_codes(key)[0]
+                result = self._stealth_mode.send_keyboard(scan_code, True)
+            else:
                 keyboard.press(key)
+                result = True
+            
+            if result:
+                self._pressed_keys[key] = True
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Failed to simulate key down: {e}")
+            return False
+
+    def key_up(self, key: str) -> bool:
+        """Simulate key up."""
+        try:
+            if key not in self._pressed_keys or not self._pressed_keys[key]:
+                return True
+            
+            if self._use_stealth:
+                scan_code = keyboard.key_to_scan_codes(key)[0]
+                result = self._stealth_mode.send_keyboard(scan_code, False)
             else:
                 keyboard.release(key)
+                result = True
+            
+            if result:
+                self._pressed_keys[key] = False
+            
+            return result
             
         except Exception as e:
-            self.logger.error(f"Error in normal key simulation: {e}")
+            self.logger.error(f"Failed to simulate key up: {e}")
+            return False
 
-    def _simulate_key_stealth(self, key: str, press: bool):
-        """Simulate keyboard input using Interception."""
-        try:
-            if not self._interception_loaded:
-                return
-            
-            # Convert key to scan code
-            scan_code = keyboard.key_to_scan_codes(key)[0]
-            
-            # Create stroke
-            stroke = self._interception.InterceptionKeyStroke()
-            stroke.code = scan_code
-            stroke.state = 0 if press else 1
-            
-            # Send stroke
-            self._interception.interception_send(
-                self._interception.interception_create_context(),
-                1,  # Keyboard device
-                ctypes.byref(stroke),
-                1
-            )
-            
-        except Exception as e:
-            self.logger.error(f"Error in stealth key simulation: {e}")
-
-    def simulate_mouse_move(self, x: int, y: int, relative: bool = False):
+    def mouse_move(self, x: int, y: int, duration: Optional[float] = None,
+                  relative: bool = False) -> bool:
         """Simulate mouse movement."""
         try:
+            # Get current position
+            current_x, current_y = win32api.GetCursorPos()
+            
             if relative:
-                current_x, current_y = win32api.GetCursorPos()
-                x += current_x
-                y += current_y
-            
-            if self.mode == InputMode.STEALTH and self._interception_loaded:
-                self._simulate_mouse_move_stealth(x, y)
+                target_x = current_x + x
+                target_y = current_y + y
             else:
-                self._simulate_mouse_move_normal(x, y)
+                target_x = x
+                target_y = y
             
-        except Exception as e:
-            self.logger.error(f"Error simulating mouse move: {e}")
-
-    def _simulate_mouse_move_normal(self, x: int, y: int):
-        """Simulate mouse movement using standard API."""
-        try:
-            win32api.SetCursorPos((x, y))
-        except Exception as e:
-            self.logger.error(f"Error in normal mouse move: {e}")
-
-    def _simulate_mouse_move_stealth(self, x: int, y: int):
-        """Simulate mouse movement using Interception."""
-        try:
-            if not self._interception_loaded:
-                return
+            if duration:
+                # Smooth movement
+                steps = int(duration * 60)  # 60 FPS
+                dx = (target_x - current_x) / steps
+                dy = (target_y - current_y) / steps
+                
+                for i in range(steps):
+                    x = int(current_x + dx * i)
+                    y = int(current_y + dy * i)
+                    
+                    if self._use_stealth:
+                        if not self._stealth_mode.send_mouse(x, y):
+                            return False
+                    else:
+                        win32api.SetCursorPos((x, y))
+                    
+                    time.sleep(duration / steps)
             
-            # Create stroke
-            stroke = self._interception.InterceptionMouseStroke()
-            stroke.x = x
-            stroke.y = y
-            stroke.flags = 0x01  # INTERCEPTION_MOUSE_MOVE_ABSOLUTE
-            
-            # Send stroke
-            self._interception.interception_send(
-                self._interception.interception_create_context(),
-                11,  # Mouse device
-                ctypes.byref(stroke),
-                1
-            )
-            
-        except Exception as e:
-            self.logger.error(f"Error in stealth mouse move: {e}")
-
-    def simulate_mouse_button(self, button: str, press: bool = True):
-        """Simulate mouse button."""
-        try:
-            if self.mode == InputMode.STEALTH and self._interception_loaded:
-                self._simulate_mouse_button_stealth(button, press)
+            # Final position
+            if self._use_stealth:
+                result = self._stealth_mode.send_mouse(target_x, target_y)
             else:
-                self._simulate_mouse_button_normal(button, press)
+                win32api.SetCursorPos((target_x, target_y))
+                result = True
+            
+            if result:
+                self._last_pos = (target_x, target_y)
+            
+            return result
             
         except Exception as e:
-            self.logger.error(f"Error simulating mouse button: {e}")
+            self.logger.error(f"Failed to simulate mouse movement: {e}")
+            return False
 
-    def _simulate_mouse_button_normal(self, button: str, press: bool):
-        """Simulate mouse button using standard API."""
+    def mouse_click(self, button: Union[str, MouseButton],
+                   duration: Optional[float] = None) -> bool:
+        """Simulate mouse click."""
         try:
-            if press:
-                mouse.press(button=button)
+            # Convert string to enum
+            if isinstance(button, str):
+                button = MouseButton[button.upper()]
+            
+            # Get button state
+            if button in self._pressed_buttons and self._pressed_buttons[button]:
+                return True
+            
+            # Map buttons
+            if self._use_stealth:
+                button_map = {
+                    MouseButton.LEFT: 1,
+                    MouseButton.RIGHT: 2,
+                    MouseButton.MIDDLE: 4
+                }
+                buttons = button_map[button]
+                
+                # Click
+                if not self._stealth_mode.send_mouse(0, 0, buttons):
+                    return False
+                
+                if duration:
+                    time.sleep(duration)
+                
+                return self._stealth_mode.send_mouse(0, 0, 0)
+            
             else:
-                mouse.release(button=button)
+                button_map = {
+                    MouseButton.LEFT: 'left',
+                    MouseButton.RIGHT: 'right',
+                    MouseButton.MIDDLE: 'middle'
+                }
+                mouse.press(button=button_map[button])
+                
+                if duration:
+                    time.sleep(duration)
+                
+                mouse.release(button=button_map[button])
+                return True
             
         except Exception as e:
-            self.logger.error(f"Error in normal mouse button: {e}")
+            self.logger.error(f"Failed to simulate mouse click: {e}")
+            return False
 
-    def _simulate_mouse_button_stealth(self, button: str, press: bool):
-        """Simulate mouse button using Interception."""
-        try:
-            if not self._interception_loaded:
-                return
-            
-            # Map button to flag
-            button_flags = {
-                'left': 0x02,    # INTERCEPTION_MOUSE_LEFT_BUTTON_DOWN
-                'right': 0x08,   # INTERCEPTION_MOUSE_RIGHT_BUTTON_DOWN
-                'middle': 0x20   # INTERCEPTION_MOUSE_MIDDLE_BUTTON_DOWN
-            }
-            
-            if button not in button_flags:
-                return
-            
-            # Create stroke
-            stroke = self._interception.InterceptionMouseStroke()
-            stroke.flags = button_flags[button] if press else button_flags[button] << 1
-            
-            # Send stroke
-            self._interception.interception_send(
-                self._interception.interception_create_context(),
-                11,  # Mouse device
-                ctypes.byref(stroke),
-                1
-            )
-            
-        except Exception as e:
-            self.logger.error(f"Error in stealth mouse button: {e}")
-
-    def simulate_mouse_scroll(self, delta: int):
+    def mouse_scroll(self, delta: int) -> bool:
         """Simulate mouse wheel."""
         try:
-            if self.mode == InputMode.STEALTH and self._interception_loaded:
-                self._simulate_mouse_scroll_stealth(delta)
+            if self._use_stealth:
+                return self._stealth_mode.send_mouse(0, 0, wheel=delta)
             else:
-                self._simulate_mouse_scroll_normal(delta)
+                mouse.wheel(delta)
+                return True
             
         except Exception as e:
-            self.logger.error(f"Error simulating mouse scroll: {e}")
+            self.logger.error(f"Failed to simulate mouse wheel: {e}")
+            return False
 
-    def _simulate_mouse_scroll_normal(self, delta: int):
-        """Simulate mouse wheel using standard API."""
+    def get_cursor_pos(self) -> Optional[Tuple[int, int]]:
+        """Get current cursor position."""
         try:
-            mouse.wheel(delta=delta)
+            return win32api.GetCursorPos()
         except Exception as e:
-            self.logger.error(f"Error in normal mouse scroll: {e}")
+            self.logger.error(f"Failed to get cursor position: {e}")
+            return None
 
-    def _simulate_mouse_scroll_stealth(self, delta: int):
-        """Simulate mouse wheel using Interception."""
+    def restore_cursor_pos(self) -> bool:
+        """Restore last cursor position."""
         try:
-            if not self._interception_loaded:
-                return
-            
-            # Create stroke
-            stroke = self._interception.InterceptionMouseStroke()
-            stroke.rolling = delta
-            stroke.flags = 0x400  # INTERCEPTION_MOUSE_WHEEL
-            
-            # Send stroke
-            self._interception.interception_send(
-                self._interception.interception_create_context(),
-                11,  # Mouse device
-                ctypes.byref(stroke),
-                1
-            )
+            if self._last_pos:
+                return self.mouse_move(*self._last_pos)
+            return False
             
         except Exception as e:
-            self.logger.error(f"Error in stealth mouse scroll: {e}")
+            self.logger.error(f"Failed to restore cursor position: {e}")
+            return False
 
-    def get_input_state(self) -> Dict:
-        """Get current input state."""
+    def release_all(self) -> None:
+        """Release all pressed keys and buttons."""
         try:
-            with self._lock:
-                return {
-                    'keyboard': {
-                        'pressed_keys': list(self._pressed_keys)
-                    },
-                    'mouse': {
-                        'position': self._mouse_position,
-                        'buttons': dict(self._mouse_buttons)
-                    }
-                }
+            # Release keys
+            for key in list(self._pressed_keys.keys()):
+                if self._pressed_keys[key]:
+                    self.key_up(key)
+            
+            # Release buttons
+            for button in list(self._pressed_buttons.keys()):
+                if self._pressed_buttons[button]:
+                    self.mouse_click(button)
+            
         except Exception as e:
-            self.logger.error(f"Error getting input state: {e}")
-            return {}
+            self.logger.error(f"Failed to release all inputs: {e}")
 
     def cleanup(self):
         """Clean up resources."""
         try:
-            self._stop_flag.set()
-            
-            # Stop listeners
-            if hasattr(self, '_keyboard_listener'):
-                self._keyboard_listener.stop()
-            if hasattr(self, '_mouse_listener'):
-                self._mouse_listener.stop()
-            
-            # Unload Interception
-            if self._interception_loaded:
-                try:
-                    self._interception.interception_destroy_context(
-                        self._interception.interception_create_context()
-                    )
-                except:
-                    pass
+            self.release_all()
             
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
