@@ -2,47 +2,77 @@
 
 Advanced Macro Recording and Automation Tool for Windows
 
-## Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Windows](https://img.shields.io/badge/platform-Windows-blue.svg)](https://www.microsoft.com/windows)
 
-- **Smart Recording**: Automatically detects and adapts to window positions and sizes
-- **Multiple Recording Modes**: Record mouse movements, keyboard inputs, and window interactions
-- **Intelligent Playback**: Adjusts macro execution based on window state and context
-- **Stealth Mode**: Optional undetectable input simulation using hardware-level drivers
-- **Multi-Language Support**: Available in English, Polish, German, French, Italian, and Spanish
-- **Customizable Hotkeys**: Fully configurable keyboard shortcuts for all actions
-- **Macro Slots**: 6 dedicated slots for quick access to frequently used macros
-- **Advanced Settings**: Fine-tune recording and playback behavior
-- **Script Support**: Create and edit macro scripts for complex automation
-- **Portable Version**: Available as installer or portable application
+## Overview
 
-## Requirements
+AuTOMIC MacroTool is a powerful and user-friendly macro recording and automation tool designed for Windows. It allows you to record, edit, and playback mouse and keyboard actions with advanced features like scripting, window detection, and stealth mode.
 
-- Windows 10/11 (64-bit)
-- Python 3.8 or higher (for development)
-- Administrator rights (for stealth mode)
+### Key Features
+
+- **Advanced Recording**
+  - Mouse movement and clicks
+  - Keyboard input
+  - Delay timing
+  - Window-specific recording
+  - DirectX mode support
+
+- **Smart Playback**
+  - Multiple playback modes (once, loop, count)
+  - Adjustable playback speed
+  - Randomized delays
+  - Stop on input
+  - Position restoration
+  - Stealth mode
+
+- **Scripting Support**
+  - Python-based scripting
+  - Built-in script editor
+  - API documentation
+  - Syntax highlighting
+  - Real-time validation
+
+- **User Interface**
+  - Modern Qt-based interface
+  - Multiple language support
+  - Light/Dark themes
+  - Customizable hotkeys
+  - System tray integration
+
+- **Professional Features**
+  - 6 macro slots
+  - Window detection
+  - DirectX compatibility
+  - Backup/Restore
+  - Portable mode
 
 ## Installation
 
-### From Installer
-1. Download the latest installer from the [releases page](https://github.com/atomicark/atomic-macro-tool/releases)
-2. Run the installer and follow the instructions
-3. Launch AuTOMIC MacroTool from the Start Menu
+### Option 1: Installer
 
-### Portable Version
-1. Download the portable version from the [releases page](https://github.com/atomicark/atomic-macro-tool/releases)
-2. Extract the archive to your desired location
-3. Run `atomic_macro.exe`
+1. Download the latest installer from [Releases](https://github.com/Atomic-Ark/AuTOMIC_MacroTool/releases)
+2. Run `AuTOMIC_MacroTool_Setup.exe`
+3. Follow the installation wizard
 
-### From Source
+### Option 2: Portable Version
+
+1. Download the ZIP archive from [Releases](https://github.com/Atomic-Ark/AuTOMIC_MacroTool/releases)
+2. Extract to your preferred location
+3. Run `AuTOMIC_MacroTool.exe`
+
+### Option 3: From Source
+
 ```bash
 # Clone repository
-git clone https://github.com/atomicark/atomic-macro-tool.git
-cd atomic-macro-tool
+git clone https://github.com/Atomic-Ark/AuTOMIC_MacroTool.git
+cd AuTOMIC_MacroTool
 
 # Create virtual environment
 python -m venv venv
 source venv/Scripts/activate  # Windows
-source venv/bin/activate      # Linux/Mac
+# source venv/bin/activate   # Linux/Mac
 
 # Install dependencies
 pip install -r requirements.txt
@@ -51,105 +81,144 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
-## Development
-
-### Setup Development Environment
-```bash
-# Install development dependencies
-pip install -r requirements.txt[dev]
-
-# Run tests
-pytest tests
-
-# Run linting
-pylint src
-black src
-
-# Build documentation
-cd docs
-make html
-```
-
-### Building Executable
-```bash
-# Basic build
-build.bat
-
-# Debug build with console
-build.bat --debug --console
-
-# Clean build with tests and documentation
-build.bat --clean --test --doc
-```
-
 ## Usage
 
 ### Quick Start
+
 1. Launch AuTOMIC MacroTool
-2. Press F1 (default) to start recording
+2. Press F1 to start recording
 3. Perform actions you want to record
 4. Press F1 again to stop recording
-5. Press F2 (default) to play the recorded macro
-6. Press Ctrl+Alt+P (default) to stop playback at any time
+5. Press F2 to play the recorded macro
+
+### Macro Slots
+
+- Use the 6 available slots to store different macros
+- Assign hotkeys to each slot for quick access
+- Drag and drop macros between slots
+- Export/Import macros for sharing
+
+### Scripting
+
+```python
+# Example script
+from time import sleep
+
+# Get active window
+window = get_active_window()
+bring_to_front(window)
+
+# Perform actions
+mouse_move(100, 100)
+mouse_click('left')
+sleep(0.5)
+key_press('ctrl+c')
+
+# Wait for specific window
+notepad = wait_for_window('Notepad')
+if notepad:
+    bring_to_front(notepad)
+    key_press('ctrl+v')
+```
 
 ### Advanced Features
-- **Window Detection**: Select specific windows for recording
-- **Relative Positioning**: Macros adapt to window position and size
-- **Delay Customization**: Adjust or randomize delays between actions
-- **Script Editor**: Create complex macros using Python scripts
-- **Stealth Mode**: Enable undetectable input simulation
-- **Macro Management**: Save, load, and organize macros in slots
+
+- **Window Mode**: Record actions relative to specific windows
+- **DirectX Mode**: Capture input in DirectX applications
+- **Stealth Mode**: Simulate hardware-level input
+- **Backup/Restore**: Automatically save macro configurations
+- **Portable Mode**: Run without installation
 
 ## Configuration
 
-### Settings
-- **General**: Language, theme, startup behavior
-- **Recording**: Input types, delay settings, window detection
-- **Playback**: Speed, repeat options, safety features
-- **Hotkeys**: Customize keyboard shortcuts
-- **Advanced**: Debug level, performance options
+Settings can be accessed through:
+- Menu: File > Settings
+- Hotkey: Ctrl+Alt+S
+- Command line: `--config`
 
-### Macro Storage
-- Default location: `%USERPROFILE%\Documents\AuTOMIC_MacroTool\macros`
-- Portable mode: Stores macros in application directory
-- Automatic backups: Created every 5 minutes during recording
+### Key Settings
 
-## Troubleshooting
+- Recording options
+- Playback behavior
+- Hotkey assignments
+- Language selection
+- Theme preferences
+- Backup settings
 
-### Common Issues
-- **Admin Rights Required**: Some features need administrator privileges
-- **Antivirus Warnings**: May occur due to input simulation
-- **Playback Issues**: Check window position and state
-- **Performance Problems**: Adjust recording settings
+## Building
 
-### Debug Mode
-1. Launch with `--debug --console` flags
-2. Check log files in `%USERPROFILE%\Documents\AuTOMIC_MacroTool\logs`
-3. Enable detailed logging in settings
+### Prerequisites
+
+- Python 3.8 or later
+- Qt 6.5.0 or later
+- Inno Setup 6 (for installer)
+
+### Build Steps
+
+1. Install build dependencies:
+   ```bash
+   pip install -e .[dev]
+   ```
+
+2. Run build script:
+   ```bash
+   # Windows
+   build.bat
+
+   # Linux/Mac
+   python build_standalone.py
+   ```
+
+3. Find outputs in:
+   - `dist/standalone/` - Portable version
+   - `dist/installer/` - Windows installer
+   - `dist/` - ZIP archive
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests and linting
+4. Run tests: `pytest tests`
 5. Submit a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Credits
 
-- Author: AtomicArk
-- Icons: [Material Design Icons](https://materialdesignicons.com/)
-- Stealth Mode: [Interception Driver](https://github.com/oblitum/Interception)
+- **Author**: AtomicArk (atomicarkft@gmail.com)
+- **Contributors**: See [GitHub contributors](https://github.com/Atomic-Ark/AuTOMIC_MacroTool/graphs/contributors)
+
+### Third-Party Libraries
+
+- [PyQt6](https://www.riverbankcomputing.com/software/pyqt/) - GUI framework
+- [keyboard](https://github.com/boppreh/keyboard) - Keyboard input
+- [mouse](https://github.com/boppreh/mouse) - Mouse input
+- [pynput](https://github.com/moses-palmer/pynput) - Input monitoring
+- [interception](https://github.com/oblitum/Interception) - Stealth mode
+- [pywin32](https://github.com/mhammond/pywin32) - Windows API
 
 ## Support
 
-- [Documentation](https://atomic-macro-tool.readthedocs.io/)
-- [Issue Tracker](https://github.com/atomicark/atomic-macro-tool/issues)
-- [Discussions](https://github.com/atomicark/atomic-macro-tool/discussions)
+- [Issue Tracker](https://github.com/Atomic-Ark/AuTOMIC_MacroTool/issues)
+- [Discussions](https://github.com/Atomic-Ark/AuTOMIC_MacroTool/discussions)
+- Email: atomicarkft@gmail.com
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
+
+## Roadmap
+
+- Linux support
+- Cloud sync
+- Macro marketplace
+- Plugin system
+- AI-assisted automation
 
 ---
 

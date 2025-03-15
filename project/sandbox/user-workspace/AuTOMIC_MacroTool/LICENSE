@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2023 AtomicArk
+Copyright (c) 2025 AtomicArk
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,60 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+-------------------------------------------------------------------------------
+
+Third-Party Software Licenses
+
+This software includes the following third-party packages, which have their own licenses:
+
+1. PyQt6 - GPL v3 License
+   Copyright (c) 2023 Riverbank Computing Limited
+   https://www.riverbankcomputing.com/software/pyqt/
+
+2. keyboard - MIT License
+   Copyright (c) 2016 BoppreH
+   https://github.com/boppreh/keyboard
+
+3. mouse - MIT License
+   Copyright (c) 2016 BoppreH
+   https://github.com/boppreh/mouse
+
+4. pynput - LGPL v3 License
+   Copyright (c) 2015-2023 Moses Palmér
+   https://github.com/moses-palmer/pynput
+
+5. Interception - LGPL v3 License
+   Copyright (c) 2008-2018 Francisco Lopes
+   https://github.com/oblitum/Interception
+
+6. pywin32 - Python Software Foundation License
+   Copyright (c) 1994-2008 Mark Hammond
+   https://github.com/mhammond/pywin32
+
+7. psutil - BSD 3-Clause License
+   Copyright (c) 2009-2023 Giampaolo Rodola
+   https://github.com/giampaolo/psutil
+
+8. darkdetect - BSD 3-Clause License
+   Copyright (c) 2019 Alberto Sottile
+   https://github.com/albertosottile/darkdetect
+
+9. packaging - Apache License 2.0 & BSD 2-Clause License
+   Copyright (c) Donald Stufft and individual contributors
+   https://github.com/pypa/packaging
+
+10. requests - Apache License 2.0
+    Copyright (c) 2019 Kenneth Reitz
+    https://github.com/psf/requests
+
+Acknowledgments:
+- The Qt framework is used under the GPL v3 license through PyQt6
+- The Interception driver is used under the LGPL v3 license
+- All other dependencies are used under their respective open-source licenses
+
+For the full text of these licenses, please visit the respective project websites
+or refer to the documentation included with each package.
+
+Note: This software is distributed with the understanding that users will comply
+with the terms of all included third-party licenses.
