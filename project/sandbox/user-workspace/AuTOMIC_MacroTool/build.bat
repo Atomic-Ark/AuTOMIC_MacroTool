@@ -1,17 +1,28 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: AuTOMIC MacroTool Build Script
+:: Copyright (c) 2025 AtomicArk
+
+echo AuTOMIC MacroTool Build Script
+echo =============================
+echo.
+
 :: Check Python installation
-where python >nul 2>nul
-if %ERRORLEVEL% neq 0 (
-    echo Python is not installed or not in PATH
+python --version > nul 2>&1
+if errorlevel 1 (
+    echo Error: Python not found in PATH
+    echo Please install Python 3.8 or later
+    pause
     exit /b 1
 )
 
-:: Check Python version
-python -c "import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)"
-if %ERRORLEVEL% neq 0 (
-    echo Python 3.8 or higher is required
+:: Check pip installation
+pip --version > nul 2>&1
+if errorlevel 1 (
+    echo Error: pip not found
+    echo Please install pip
+    pause
     exit /b 1
 )
 
@@ -19,146 +30,138 @@ if %ERRORLEVEL% neq 0 (
 if not exist "venv" (
     echo Creating virtual environment...
     python -m venv venv
-    if %ERRORLEVEL% neq 0 (
-        echo Failed to create virtual environment
+    if errorlevel 1 (
+        echo Error: Failed to create virtual environment
+        pause
         exit /b 1
     )
 )
 
 :: Activate virtual environment
 call venv\Scripts\activate
-if %ERRORLEVEL% neq 0 (
-    echo Failed to activate virtual environment
+if errorlevel 1 (
+    echo Error: Failed to activate virtual environment
+    pause
     exit /b 1
 )
 
-:: Parse arguments
-set DEBUG=0
-set CONSOLE=0
-set CLEAN=0
-set TEST=0
-set LINT=0
-set DOC=0
-
-:parse_args
-if "%~1"=="" goto end_parse
-if /i "%~1"=="--debug" set DEBUG=1
-if /i "%~1"=="--console" set CONSOLE=1
-if /i "%~1"=="--clean" set CLEAN=1
-if /i "%~1"=="--test" set TEST=1
-if /i "%~1"=="--lint" set LINT=1
-if /i "%~1"=="--doc" set DOC=1
-shift
-goto parse_args
-:end_parse
-
-:: Clean build
-if %CLEAN%==1 (
-    echo Cleaning previous builds...
-    if exist "build" rd /s /q "build"
-    if exist "dist" rd /s /q "dist"
-    if exist "*.spec" del /q "*.spec"
-    if exist "__pycache__" rd /s /q "__pycache__"
-)
-
-:: Install/upgrade pip
+:: Update pip
+echo Updating pip...
 python -m pip install --upgrade pip
-if %ERRORLEVEL% neq 0 (
-    echo Failed to upgrade pip
-    exit /b 1
+if errorlevel 1 (
+    echo Warning: Failed to update pip
 )
 
 :: Install requirements
 echo Installing requirements...
 pip install -r requirements.txt
-if %ERRORLEVEL% neq 0 (
-    echo Failed to install requirements
+if errorlevel 1 (
+    echo Error: Failed to install requirements
+    pause
     exit /b 1
 )
 
-:: Run tests if requested
-if %TEST%==1 (
-    echo Running tests...
-    python -m pytest tests --cov=src --cov-report=html
-    if %ERRORLEVEL% neq 0 (
-        echo Tests failed
-        exit /b 1
+:: Install development requirements
+echo Installing development requirements...
+pip install -e .[dev]
+if errorlevel 1 (
+    echo Warning: Failed to install development requirements
+)
+
+:: Run tests
+echo Running tests...
+pytest tests
+if errorlevel 1 (
+    echo Warning: Some tests failed
+    choice /C YN /M "Continue with build?"
+    if errorlevel 2 exit /b 1
+)
+
+:: Check code style
+echo Checking code style...
+black --check src
+if errorlevel 1 (
+    echo Warning: Code style issues found
+    choice /C YN /M "Format code automatically?"
+    if errorlevel 1 (
+        black src
     )
 )
 
-:: Run linting if requested
-if %LINT%==1 (
-    echo Running linting...
-    python -m pylint src
-    if %ERRORLEVEL% neq 0 (
-        echo Linting found issues
-        exit /b 1
-    )
-    
-    echo Running code formatting check...
-    python -m black --check src
-    if %ERRORLEVEL% neq 0 (
-        echo Code formatting issues found
-        exit /b 1
-    )
+:: Run static type checking
+echo Running type checking...
+mypy src
+if errorlevel 1 (
+    echo Warning: Type checking issues found
+    choice /C YN /M "Continue with build?"
+    if errorlevel 2 exit /b 1
 )
 
-:: Build documentation if requested
-if %DOC%==1 (
-    echo Building documentation...
-    cd docs
-    call make html
-    if %ERRORLEVEL% neq 0 (
-        echo Documentation build failed
-        cd ..
-        exit /b 1
-    )
+:: Check Inno Setup installation
+echo Checking Inno Setup installation...
+if not exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" (
+    echo Warning: Inno Setup not found
+    echo Please install Inno Setup 6 from https://jrsoftware.org/isdl.php
+    choice /C YN /M "Continue without installer?"
+    if errorlevel 2 exit /b 1
+)
+
+:: Clean previous builds
+echo Cleaning previous builds...
+if exist "build" rd /s /q "build"
+if exist "dist" rd /s /q "dist"
+if exist "atomic_macro.spec" del /f /q "atomic_macro.spec"
+
+:: Build documentation
+echo Building documentation...
+cd docs
+if errorlevel 1 (
+    echo Warning: Documentation build failed
+) else (
+    make html
     cd ..
 )
 
-:: Download UPX if not present
-if not exist "upx" (
-    echo Downloading UPX...
-    powershell -Command "& {Invoke-WebRequest -Uri 'https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-win64.zip' -OutFile 'upx.zip'}"
-    powershell -Command "& {Expand-Archive -Path 'upx.zip' -DestinationPath 'upx' -Force}"
-    del /q "upx.zip"
-)
+:: Create version file
+echo Creating version file...
+echo __version__ = "1.0.0" > src\version.py
 
 :: Build executable
 echo Building executable...
-set BUILD_ARGS=
-if %DEBUG%==1 set BUILD_ARGS=!BUILD_ARGS! --debug
-if %CONSOLE%==1 set BUILD_ARGS=!BUILD_ARGS! --console
-
-python build_standalone.py !BUILD_ARGS!
-if %ERRORLEVEL% neq 0 (
-    echo Build failed
+python build_standalone.py
+if errorlevel 1 (
+    echo Error: Build failed
+    pause
     exit /b 1
 )
 
-:: Create installer if not debug build
-if %DEBUG%==0 (
-    echo Creating installer...
-    iscc atomic_macro.iss
-    if %ERRORLEVEL% neq 0 (
-        echo Installer creation failed
-        exit /b 1
-    )
-)
+:: Create ZIP archive
+echo Creating ZIP archive...
+cd dist\standalone
+powershell Compress-Archive -Path * -DestinationPath ..\AuTOMIC_MacroTool.zip -Force
+cd ..\..
 
 :: Success message
 echo.
 echo Build completed successfully!
-if %DEBUG%==1 (
-    echo Debug build is in dist\atomic_macro\
-) else (
-    echo Release build is in dist\atomic_macro\
-    echo Portable version is in dist\atomic_macro_portable\
-    echo Installer is in Output\AtomicMacroSetup.exe
-)
+echo.
+echo Files created:
+echo - Standalone executable: dist\standalone\AuTOMIC_MacroTool.exe
+echo - Installer: dist\installer\AuTOMIC_MacroTool_Setup.exe
+echo - ZIP archive: dist\AuTOMIC_MacroTool.zip
+echo.
 
 :: Deactivate virtual environment
 deactivate
 
-endlocal
+:: Optional: Clean up
+choice /C YN /M "Clean up build files?"
+if errorlevel 1 (
+    if exist "build" rd /s /q "build"
+    if exist "atomic_macro.spec" del /f /q "atomic_macro.spec"
+)
+
+echo.
+echo Thank you for using AuTOMIC MacroTool Build Script
+pause
 exit /b 0

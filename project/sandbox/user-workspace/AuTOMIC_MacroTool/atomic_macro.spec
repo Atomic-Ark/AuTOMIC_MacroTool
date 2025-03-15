@@ -1,70 +1,85 @@
 # -*- mode: python ; coding: utf-8 -*-
+"""
+PyInstaller spec file for AuTOMIC MacroTool.
+Copyright (c) 2025 AtomicArk
+"""
+
 import os
 import sys
 from pathlib import Path
 
+block_cipher = None
+
 # Get project root
-project_root = os.path.abspath(SPECPATH)
+project_root = Path(SPECPATH)
 
-# Add project root to path
-sys.path.insert(0, project_root)
-
-# Get data files
-def get_data_files():
-    data_files = []
-    
+# Resource files
+resource_files = [
     # Language files
-    langs_dir = os.path.join(project_root, 'src', 'resources', 'langs')
-    for lang_file in Path(langs_dir).glob('*.json'):
-        data_files.append((str(lang_file), os.path.join('resources', 'langs')))
-    
+    ('src/resources/langs/*.json', 'resources/langs'),
     # Icons
-    icons_dir = os.path.join(project_root, 'src', 'resources', 'icons')
-    if os.path.exists(icons_dir):
-        for icon_file in Path(icons_dir).glob('*.*'):
-            data_files.append((str(icon_file), os.path.join('resources', 'icons')))
-    
+    ('src/resources/icons/*', 'resources/icons'),
     # Themes
-    themes_dir = os.path.join(project_root, 'src', 'resources', 'themes')
-    if os.path.exists(themes_dir):
-        for theme_file in Path(themes_dir).glob('*.*'):
-            data_files.append((str(theme_file), os.path.join('resources', 'themes')))
-    
-    return data_files
+    ('src/resources/themes/*', 'resources/themes'),
+    # Documentation
+    ('LICENSE', '.'),
+    ('README.md', '.'),
+]
+
+# Collect data files
+datas = []
+for src_pattern, dst_dir in resource_files:
+    src_path = project_root / src_pattern
+    for file_path in Path(src_path.parent).glob(src_path.name):
+        datas.append((str(file_path), dst_dir))
 
 # Hidden imports
 hidden_imports = [
+    # Core dependencies
     'win32api',
     'win32con',
     'win32gui',
     'win32process',
-    'win32ui',
-    'pynput.keyboard._win32',
-    'pynput.mouse._win32',
-    'cv2',
-    'numpy',
-    'darkdetect',
     'keyboard',
     'mouse',
+    'pynput',
+    'interception',
     'psutil',
+    'darkdetect',
+    'packaging',
     'requests',
+    # Qt plugins
+    'PyQt6.QtCore',
+    'PyQt6.QtGui',
+    'PyQt6.QtWidgets',
+    'PyQt6.QtNetwork',
+    'PyQt6.sip',
 ]
 
 # Binary dependencies
 binaries = []
 
-# Get data files
-datas = get_data_files()
+# Qt plugins to include
+qt_plugins = [
+    'platforms',
+    'platformthemes',
+    'styles',
+    'imageformats',
+    'iconengines',
+]
 
-# Add documentation and license
-datas.extend([
-    (os.path.join(project_root, 'README.md'), '.'),
-    (os.path.join(project_root, 'LICENSE'), '.'),
-])
+# Add Qt plugins to binaries
+import PyQt6
+qt_path = os.path.dirname(PyQt6.__file__)
+for plugin in qt_plugins:
+    plugin_path = os.path.join(qt_path, 'Qt6', 'plugins', plugin)
+    if os.path.exists(plugin_path):
+        binaries.extend([(os.path.join(plugin_path, file), os.path.join('PyQt6', 'Qt6', 'plugins', plugin))
+                        for file in os.listdir(plugin_path) if file.endswith('.dll')])
 
 a = Analysis(
-    [os.path.join(project_root, 'src', 'main.py')],
-    pathex=[project_root],
+    ['src/main.py'],
+    pathex=[str(project_root)],
     binaries=binaries,
     datas=datas,
     hiddenimports=hidden_imports,
@@ -74,85 +89,77 @@ a = Analysis(
     excludes=[],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
-    cipher=None,
+    cipher=block_cipher,
     noarchive=False,
-    module_collection_mode={'cv2': 'pyz+py'},
 )
 
-# Exclude unnecessary files
+# Exclude unnecessary Qt modules and debug files
 def exclude_from_analysis(analysis):
-    excludes = {
-        'mkl_',  # MKL libraries
-        'libopenblas',  # OpenBLAS
-        'libtbb',  # Intel TBB
-        'cudart',  # CUDA Runtime
-        'cublas',  # CUDA BLAS
-        'cusolver',  # CUDA Solver
-    }
-    
-    return [
-        (b, n, t)
-        for b, n, t in analysis.binaries
-        if not any(e in n.lower() for e in excludes)
+    excludes = [
+        'Qt6Pdf',
+        'Qt6Quick',
+        'Qt6Qml',
+        'Qt6WebEngine',
+        'Qt6Designer',
+        'libGLESv2',
+        'libEGL',
+        'd3dcompiler',
+        'opengl32sw',
     ]
+    
+    analysis.binaries = [(name, path, type)
+                        for name, path, type in analysis.binaries
+                        if not any(exclude in name for exclude in excludes)]
+    
+    return analysis
 
-a.binaries = exclude_from_analysis(a)
+a = exclude_from_analysis(a)
 
 pyz = PYZ(
     a.pure,
     a.zipped_data,
-    cipher=None,
+    cipher=block_cipher
 )
 
 exe = EXE(
     pyz,
     a.scripts,
-    [],
-    exclude_binaries=True,
-    name='atomic_macro',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=not DEBUG,
-    upx=not DEBUG,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=DEBUG,
-    disable_windowed_traceback=not DEBUG,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon=os.path.join(project_root, 'src', 'resources', 'icons', 'app.ico'),
-    version='file_version_info.txt',
-    uac_admin=True,
-)
-
-# Create collection
-coll = COLLECT(
-    exe,
     a.binaries,
     a.zipfiles,
     a.datas,
-    strip=not DEBUG,
-    upx=not DEBUG,
+    [],
+    name='AuTOMIC_MacroTool',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
     upx_exclude=[],
-    name='atomic_macro',
+    runtime_tmpdir=None,
+    console=False,
+    disable_windowed_traceback=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    version='version_info.txt',
+    icon='src/resources/icons/app.ico',
+    uac_admin=True,
 )
 
-# Create portable version if not debug
-if not DEBUG:
-    portable_dir = os.path.join('dist', 'atomic_macro_portable')
-    if not os.path.exists(portable_dir):
-        import shutil
-        shutil.copytree(
-            os.path.join('dist', 'atomic_macro'),
-            portable_dir
-        )
-        # Create portable marker
-        with open(os.path.join(portable_dir, 'portable.txt'), 'w') as f:
-            f.write('This is a portable version of AuTOMIC MacroTool')
+# Create additional files for distribution
+dist_dir = os.path.join('dist', 'standalone')
+os.makedirs(dist_dir, exist_ok=True)
 
-# Create Windows installer if not debug
-if not DEBUG and os.path.exists('atomic_macro.iss'):
-    import subprocess
-    subprocess.run(['iscc', 'atomic_macro.iss'], check=True)
+# Copy license and readme
+for file in ['LICENSE', 'README.md']:
+    if os.path.exists(file):
+        import shutil
+        shutil.copy2(file, os.path.join(dist_dir, file))
+
+# Create version file
+with open(os.path.join(dist_dir, 'version.txt'), 'w') as f:
+    f.write('1.0.0')
+
+# Optional: Create portable mode flag
+with open(os.path.join(dist_dir, 'portable.txt'), 'w') as f:
+    f.write('This file indicates portable mode.\n')
+    f.write('Delete this file to use installed mode.')
