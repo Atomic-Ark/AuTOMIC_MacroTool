@@ -1,148 +1,240 @@
 {
     "app": {
         "name": "AuTOMIC MacroTool",
-        "version": "1.0.0",
-        "author": "AtomicArk",
-        "description": "Advanced Macro Recording and Automation Tool"
-    },
-    "general": {
-        "ok": "OK",
-        "cancel": "Cancel",
-        "apply": "Apply",
-        "save": "Save",
-        "delete": "Delete",
-        "edit": "Edit",
-        "close": "Close",
-        "error": "Error",
-        "warning": "Warning",
-        "info": "Information",
-        "success": "Success",
-        "loading": "Loading...",
-        "processing": "Processing...",
-        "please_wait": "Please wait..."
+        "version": "Version %s",
+        "copyright": "© 2025 AtomicArk. All rights reserved.",
+        "website": "https://github.com/Atomic-Ark/AuTOMIC_MacroTool"
     },
     "menu": {
-        "file": "File",
-        "edit": "Edit",
-        "view": "View",
-        "tools": "Tools",
-        "help": "Help",
+        "file": {
+            "title": "File",
+            "new_macro": "New Macro",
+            "open_macro": "Open Macro...",
+            "save_macro": "Save Macro",
+            "save_as": "Save As...",
+            "import": "Import...",
+            "export": "Export...",
+            "settings": "Settings",
+            "exit": "Exit"
+        },
+        "edit": {
+            "title": "Edit",
+            "undo": "Undo",
+            "redo": "Redo",
+            "cut": "Cut",
+            "copy": "Copy",
+            "paste": "Paste",
+            "delete": "Delete",
+            "select_all": "Select All"
+        },
+        "view": {
+            "title": "View",
+            "toolbar": "Toolbar",
+            "status_bar": "Status Bar",
+            "macro_list": "Macro List",
+            "script_editor": "Script Editor"
+        },
+        "macro": {
+            "title": "Macro",
+            "record": "Record",
+            "stop": "Stop",
+            "play": "Play",
+            "pause": "Pause",
+            "edit": "Edit",
+            "delete": "Delete",
+            "properties": "Properties"
+        },
+        "script": {
+            "title": "Script",
+            "new": "New Script",
+            "open": "Open Script...",
+            "save": "Save Script",
+            "save_as": "Save Script As...",
+            "run": "Run Script",
+            "stop": "Stop Script",
+            "check": "Check Syntax"
+        },
+        "help": {
+            "title": "Help",
+            "documentation": "Documentation",
+            "api_reference": "API Reference",
+            "check_updates": "Check for Updates",
+            "about": "About"
+        }
+    },
+    "toolbar": {
         "new_macro": "New Macro",
         "open_macro": "Open Macro",
         "save_macro": "Save Macro",
-        "save_as": "Save As",
-        "import": "Import",
-        "export": "Export",
-        "settings": "Settings",
-        "exit": "Exit"
-    },
-    "toolbar": {
         "record": "Record",
         "stop": "Stop",
         "play": "Play",
         "pause": "Pause",
-        "settings": "Settings",
-        "help": "Help"
+        "settings": "Settings"
     },
-    "macro": {
-        "slot": "Slot",
-        "name": "Name",
-        "type": "Type",
-        "created": "Created",
-        "modified": "Modified",
-        "description": "Description",
-        "author": "Author",
-        "version": "Version",
-        "tags": "Tags",
-        "recorded": "Recorded",
-        "scripted": "Scripted",
-        "hybrid": "Hybrid",
-        "empty_slot": "Empty Slot",
+    "status": {
+        "ready": "Ready",
         "recording": "Recording...",
         "playing": "Playing...",
         "paused": "Paused",
         "stopped": "Stopped",
-        "no_macro": "No macro loaded",
-        "delete_confirm": "Are you sure you want to delete this macro?",
-        "overwrite_confirm": "Macro already exists. Do you want to overwrite it?"
+        "error": "Error: %s",
+        "saved": "Saved",
+        "modified": "Modified"
     },
-    "settings": {
-        "general": "General",
-        "recording": "Recording",
-        "playback": "Playback",
-        "hotkeys": "Hotkeys",
-        "advanced": "Advanced",
-        "language": "Language",
-        "theme": "Theme",
-        "ui_scale": "UI Scale",
-        "autostart": "Start with Windows",
-        "minimize_tray": "Minimize to Tray",
-        "check_updates": "Check for Updates",
-        "record_mouse": "Record Mouse",
-        "record_keyboard": "Record Keyboard",
-        "record_delays": "Record Delays",
-        "min_delay": "Minimum Delay",
-        "window_mode": "Window Mode",
-        "macro_directory": "Macro Directory",
-        "playback_mode": "Playback Mode",
-        "repeat_count": "Repeat Count",
-        "speed": "Speed",
-        "randomize_delays": "Randomize Delays",
-        "random_factor": "Random Factor",
-        "stop_on_input": "Stop on User Input",
-        "restore_mouse": "Restore Mouse Position",
-        "stealth_mode": "Stealth Mode",
-        "panic_hotkey": "Panic Button",
-        "debug_level": "Debug Level",
-        "performance_mode": "Performance Mode",
-        "reset_settings": "Reset Settings",
-        "reset_confirm": "Are you sure you want to reset all settings?"
+    "dialogs": {
+        "macro": {
+            "new": {
+                "title": "New Macro",
+                "name": "Name:",
+                "description": "Description:",
+                "type": "Type:",
+                "window": "Window",
+                "screen": "Screen",
+                "directx": "DirectX"
+            },
+            "properties": {
+                "title": "Macro Properties",
+                "name": "Name:",
+                "description": "Description:",
+                "author": "Author:",
+                "version": "Version:",
+                "created": "Created:",
+                "modified": "Modified:",
+                "type": "Type:",
+                "target": "Target Window:",
+                "hotkey": "Hotkey:",
+                "slot": "Slot:"
+            },
+            "delete": {
+                "title": "Delete Macro",
+                "confirm": "Are you sure you want to delete this macro?",
+                "multiple": "Are you sure you want to delete %d macros?"
+            },
+            "save": {
+                "title": "Save Macro",
+                "confirm": "Save changes to macro?",
+                "error": "Failed to save macro"
+            }
+        },
+        "script": {
+            "new": {
+                "title": "New Script",
+                "template": "Use Template"
+            },
+            "save": {
+                "title": "Save Script",
+                "confirm": "Save changes to script?",
+                "error": "Failed to save script"
+            },
+            "syntax": {
+                "title": "Syntax Error",
+                "error": "Syntax error: %s"
+            },
+            "run": {
+                "title": "Run Script",
+                "error": "Failed to run script: %s"
+            }
+        },
+        "settings": {
+            "title": "Settings",
+            "general": {
+                "title": "General",
+                "language": "Language:",
+                "theme": "Theme:",
+                "ui_scale": "UI Scale:",
+                "autostart": "Start with Windows",
+                "minimize": "Start minimized to tray",
+                "updates": "Check for updates"
+            },
+            "recording": {
+                "title": "Recording",
+                "mouse": "Record mouse",
+                "keyboard": "Record keyboard",
+                "delays": "Record delays",
+                "min_delay": "Minimum delay:",
+                "window_mode": "Window mode",
+                "directx_mode": "DirectX mode"
+            },
+            "playback": {
+                "title": "Playback",
+                "repeat": "Repeat mode:",
+                "count": "Repeat count:",
+                "speed": "Speed:",
+                "random": "Randomize delays",
+                "stop": "Stop on input",
+                "restore": "Restore mouse position",
+                "stealth": "Stealth mode"
+            },
+            "hotkeys": {
+                "title": "Hotkeys",
+                "record": "Start/Stop Recording",
+                "play": "Start/Stop Playback",
+                "pause": "Pause Playback",
+                "script": "Run/Stop Script",
+                "panic": "Panic Button",
+                "show": "Show/Hide Window"
+            },
+            "advanced": {
+                "title": "Advanced",
+                "debug": "Debug level:",
+                "performance": "Performance mode",
+                "macro_dir": "Macro directory:",
+                "backup_dir": "Backup directory:",
+                "browse": "Browse..."
+            }
+        },
+        "about": {
+            "title": "About %s",
+            "version": "Version %s",
+            "copyright": "© 2025 AtomicArk. All rights reserved.",
+            "description": "Advanced Macro Recording and Automation Tool",
+            "website": "Visit Website",
+            "license": "License",
+            "credits": "Credits",
+            "close": "Close"
+        },
+        "error": {
+            "title": "Error",
+            "unknown": "An unknown error occurred",
+            "file_not_found": "File not found",
+            "access_denied": "Access denied",
+            "invalid_format": "Invalid file format",
+            "already_exists": "File already exists"
+        }
+    },
+    "tray": {
+        "show": "Show",
+        "hide": "Hide",
+        "record": "Record",
+        "stop": "Stop",
+        "play": "Play",
+        "pause": "Pause",
+        "exit": "Exit"
+    },
+    "slots": {
+        "empty": "Empty Slot",
+        "drag": "Drag macro here",
+        "clear": "Clear Slot",
+        "assign": "Assign Macro"
     },
     "script": {
-        "editor": "Script Editor",
-        "check_syntax": "Check Syntax",
-        "test_run": "Test Run",
-        "save_script": "Save Script",
-        "syntax_ok": "Syntax check passed",
-        "syntax_error": "Syntax error: {0}",
-        "test_success": "Test run successful",
-        "test_error": "Test run failed: {0}",
-        "unsaved_changes": "You have unsaved changes. Do you want to save them?"
-    },
-    "updates": {
-        "checking": "Checking for updates...",
-        "available": "Update available",
-        "up_to_date": "Application is up to date",
-        "error": "Error checking for updates",
-        "download": "Download Update",
-        "installing": "Installing update...",
-        "restart_required": "Restart required to complete update"
-    },
-    "errors": {
-        "recording_failed": "Failed to start recording",
-        "playback_failed": "Failed to start playback",
-        "save_failed": "Failed to save macro",
-        "load_failed": "Failed to load macro",
-        "delete_failed": "Failed to delete macro",
-        "settings_failed": "Failed to save settings",
-        "driver_failed": "Failed to install driver",
-        "permission_denied": "Permission denied",
-        "file_not_found": "File not found",
-        "invalid_format": "Invalid file format",
-        "unknown_error": "An unknown error occurred"
-    },
-    "help": {
-        "getting_started": "Getting Started",
-        "recording": "Recording Macros",
-        "playback": "Playing Macros",
-        "scripting": "Macro Scripting",
-        "settings": "Settings Guide",
-        "troubleshooting": "Troubleshooting",
-        "about": "About",
-        "support": "Support",
-        "documentation": "Documentation",
-        "check_updates": "Check for Updates",
-        "report_bug": "Report Bug",
-        "feedback": "Send Feedback"
+        "template": "# AuTOMIC MacroTool Script\n# Created: %s\n\n# Import required modules\nfrom time import sleep\n\n# Your code here\n",
+        "api": {
+            "key_press": "Simulate keyboard input",
+            "mouse_move": "Move mouse cursor",
+            "mouse_click": "Simulate mouse button",
+            "mouse_scroll": "Simulate mouse wheel",
+            "get_window": "Get window information",
+            "find_window": "Find window by title",
+            "get_active_window": "Get active window",
+            "bring_to_front": "Bring window to front",
+            "sleep": "Wait for specified time",
+            "log": "Log message",
+            "debug": "Log debug message",
+            "wait_for_window": "Wait for window to appear",
+            "repeat": "Repeat action multiple times",
+            "wait_until": "Wait until condition is met"
+        }
     }
 }

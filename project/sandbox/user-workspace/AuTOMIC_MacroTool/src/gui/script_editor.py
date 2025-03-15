@@ -1,381 +1,329 @@
+"""
+Script editor for macro scripting.
+Copyright (c) 2025 AtomicArk
+"""
+
+import logging
+from typing import Dict, Optional
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QPlainTextEdit,
-    QPushButton, QLabel, QComboBox, QSpinBox, QCheckBox,
-    QTabWidget, QWidget, QSplitter, QTreeWidget, QTreeWidgetItem,
-    QMenu, QMessageBox, QToolBar, QStatusBar
+    QWidget, QVBoxLayout, QHBoxLayout, QPlainTextEdit,
+    QPushButton, QLabel, QSplitter, QTreeWidget,
+    QTreeWidgetItem, QMessageBox, QMenu, QStatusBar
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QSize
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import (
     QTextCharFormat, QSyntaxHighlighter, QColor,
-    QTextCursor, QKeySequence, QIcon
+    QTextCursor, QFontMetrics, QFont
 )
 
-import re
-import logging
-from typing import Dict, List, Optional
-from pathlib import Path
-
-from ..core.macro_script import MacroScript
-from ..core.macro_manager import Macro, MacroType
+from ..core.macro_script import macro_script
 from ..utils.debug_helper import get_debug_helper
 
-class ScriptHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for macro scripts."""
+class PythonHighlighter(QSyntaxHighlighter):
+    """Python syntax highlighter."""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._init_formats()
-
-    def _init_formats(self):
-        """Initialize text formats."""
-        self.formats = {
-            'keyword': self._create_format('#569CD6'),
-            'function': self._create_format('#DCDCAA'),
-            'string': self._create_format('#CE9178'),
-            'number': self._create_format('#B5CEA8'),
-            'comment': self._create_format('#6A9955', italic=True),
-            'operator': self._create_format('#D4D4D4'),
-            'variable': self._create_format('#9CDCFE'),
-            'constant': self._create_format('#4FC1FF'),
+        
+        # Syntax styles
+        self.styles = {
+            'keyword': self._format('#0077CC', 'bold'),
+            'string': self._format('#008000'),
+            'comment': self._format('#999999', 'italic'),
+            'numbers': self._format('#AA0000'),
+            'function': self._format('#C65D09'),
+            'api': self._format('#2B91AF', 'bold'),
         }
         
-        # Define patterns
-        self.patterns = {
-            'keyword': r'\b(if|else|while|for|break|continue|return|and|or|not)\b',
-            'function': r'\b\w+(?=\()',
-            'string': r'\".*?\"|\'.*?\'',
-            'number': r'\b\d+\b',
-            'comment': r'#[^\n]*',
-            'operator': r'[\+\-\*/=<>!&\|]+',
-            'variable': r'\$\w+',
-            'constant': r'\b[A-Z_]+\b',
-        }
+        # Python keywords
+        self.keywords = [
+            'and', 'as', 'assert', 'break', 'class', 'continue',
+            'def', 'del', 'elif', 'else', 'except', 'False',
+            'finally', 'for', 'from', 'global', 'if', 'import',
+            'in', 'is', 'lambda', 'None', 'nonlocal', 'not',
+            'or', 'pass', 'raise', 'return', 'True', 'try',
+            'while', 'with', 'yield'
+        ]
+        
+        # Python built-in functions
+        self.functions = [
+            'abs', 'all', 'any', 'bool', 'dict', 'float',
+            'int', 'len', 'list', 'max', 'min', 'print',
+            'range', 'round', 'set', 'str', 'sum', 'tuple'
+        ]
+        
+        # API functions
+        self.api_functions = [
+            'key_press', 'mouse_move', 'mouse_click', 'mouse_scroll',
+            'get_window', 'find_window', 'get_active_window',
+            'bring_to_front', 'sleep', 'log', 'debug',
+            'wait_for_window', 'repeat', 'wait_until'
+        ]
+        
+        # Rules
+        self.rules = []
+        
+        # Keywords
+        self.rules += [(r'\b%s\b' % w, 0, self.styles['keyword'])
+                      for w in self.keywords]
+        
+        # Functions
+        self.rules += [(r'\b%s\b' % w, 0, self.styles['function'])
+                      for w in self.functions]
+        
+        # API Functions
+        self.rules += [(r'\b%s\b' % w, 0, self.styles['api'])
+                      for w in self.api_functions]
+        
+        # String literals
+        self.rules += [
+            (r'"[^"\\]*(\\.[^"\\]*)*"', 0, self.styles['string']),
+            (r"'[^'\\]*(\\.[^'\\]*)*'", 0, self.styles['string']),
+        ]
+        
+        # Numbers
+        self.rules += [
+            (r'\b[0-9]+\b', 0, self.styles['numbers']),
+            (r'\b0[xX][0-9A-Fa-f]+\b', 0, self.styles['numbers']),
+            (r'\b[0-9]+\.[0-9]+\b', 0, self.styles['numbers']),
+        ]
+        
+        # Comments
+        self.rules += [
+            (r'#[^\n]*', 0, self.styles['comment']),
+        ]
 
-    def _create_format(self, color: str, bold: bool = False,
-                      italic: bool = False) -> QTextCharFormat:
+    def _format(self, color: str, style: str = '') -> QTextCharFormat:
         """Create text format."""
         fmt = QTextCharFormat()
         fmt.setForeground(QColor(color))
-        fmt.setFontWeight(700 if bold else 400)
-        fmt.setFontItalic(italic)
+        
+        if 'bold' in style:
+            fmt.setFontWeight(QFont.Weight.Bold)
+        if 'italic' in style:
+            fmt.setFontItalic(True)
+        
         return fmt
 
     def highlightBlock(self, text: str):
         """Highlight text block."""
-        for pattern_type, pattern in self.patterns.items():
+        for pattern, nth, format in self.rules:
             for match in re.finditer(pattern, text):
-                self.setFormat(
-                    match.start(),
-                    match.end() - match.start(),
-                    self.formats[pattern_type]
-                )
+                self.setFormat(match.start(), match.end() - match.start(), format)
+        
+        self.setCurrentBlockState(0)
 
-class CommandTreeWidget(QTreeWidget):
-    """Tree widget for command suggestions."""
+class ScriptEditor(QWidget):
+    """Macro script editor."""
     
-    command_selected = pyqtSignal(str)
+    script_changed = pyqtSignal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._init_ui()
-        self._load_commands()
-
-    def _init_ui(self):
-        """Initialize user interface."""
-        self.setHeaderLabels(['Command', 'Description'])
-        self.setColumnWidth(0, 150)
-        self.setAlternatingRowColors(True)
-        self.itemDoubleClicked.connect(self._on_item_double_clicked)
-
-    def _load_commands(self):
-        """Load available commands."""
-        commands = {
-            'Input': {
-                'click(x, y)': 'Click at coordinates',
-                'right_click(x, y)': 'Right click at coordinates',
-                'double_click(x, y)': 'Double click at coordinates',
-                'move(x, y)': 'Move mouse to coordinates',
-                'press_key(key)': 'Press keyboard key',
-                'release_key(key)': 'Release keyboard key',
-                'type_text(text)': 'Type text string',
-                'scroll(amount)': 'Scroll mouse wheel',
-            },
-            'Window': {
-                'focus_window(title)': 'Focus window by title',
-                'get_window_pos()': 'Get window position',
-                'set_window_pos(x, y)': 'Set window position',
-                'get_window_size()': 'Get window size',
-                'set_window_size(w, h)': 'Set window size',
-            },
-            'Flow Control': {
-                'wait(seconds)': 'Wait for duration',
-                'repeat(count)': 'Repeat following commands',
-                'if condition:': 'Conditional execution',
-                'while condition:': 'Loop while condition is true',
-                'break': 'Exit current loop',
-                'continue': 'Skip to next iteration',
-            },
-            'Image': {
-                'find_image(path)': 'Find image on screen',
-                'wait_for_image(path)': 'Wait for image to appear',
-                'click_image(path)': 'Click on found image',
-                'image_exists(path)': 'Check if image exists',
-            },
-            'Variables': {
-                '$variable = value': 'Assign value to variable',
-                '$mouse_x, $mouse_y': 'Current mouse position',
-                '$window_x, $window_y': 'Current window position',
-                '$screen_width': 'Screen width',
-                '$screen_height': 'Screen height',
-            },
-        }
-        
-        for category, items in commands.items():
-            category_item = QTreeWidgetItem([category])
-            self.addTopLevelItem(category_item)
-            
-            for command, description in items.items():
-                item = QTreeWidgetItem([command, description])
-                category_item.addChild(item)
-            
-        self.expandAll()
-
-    def _on_item_double_clicked(self, item: QTreeWidgetItem, column: int):
-        """Handle item double click."""
-        if item.parent():  # Only emit for child items
-            self.command_selected.emit(item.text(0))
-
-class ScriptEditor(QDialog):
-    """Macro script editor dialog."""
-    
-    def __init__(self, macro: Macro, parent=None):
-        super().__init__(parent)
-        self.macro = macro
         self.logger = logging.getLogger('ScriptEditor')
         self.debug = get_debug_helper()
+        
+        # State
+        self._current_script = ""
+        self._modified = False
+        
+        # Initialize UI
         self._init_ui()
-        self._load_script()
 
     def _init_ui(self):
         """Initialize user interface."""
-        self.setWindowTitle("Script Editor")
-        self.setMinimumSize(1000, 600)
-        
         layout = QVBoxLayout(self)
         
-        # Toolbar
-        toolbar = QToolBar()
-        toolbar.setIconSize(QSize(16, 16))
-        
-        # Actions
-        save_action = toolbar.addAction(
-            QIcon("src/resources/icons/save.png"),
-            "Save"
-        )
-        save_action.triggered.connect(self._save_script)
-        save_action.setShortcut(QKeySequence.StandardKey.Save)
-        
-        toolbar.addSeparator()
-        
-        check_action = toolbar.addAction(
-            QIcon("src/resources/icons/check.png"),
-            "Check Syntax"
-        )
-        check_action.triggered.connect(self._check_syntax)
-        
-        run_action = toolbar.addAction(
-            QIcon("src/resources/icons/run.png"),
-            "Test Run"
-        )
-        run_action.triggered.connect(self._test_run)
-        
-        layout.addWidget(toolbar)
-        
-        # Main splitter
+        # Splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        layout.addWidget(splitter)
         
-        # Command tree
-        self.command_tree = CommandTreeWidget()
-        self.command_tree.command_selected.connect(self._insert_command)
-        splitter.addWidget(self.command_tree)
+        # API documentation
+        api_widget = QWidget()
+        api_layout = QVBoxLayout(api_widget)
         
-        # Editor area
+        api_label = QLabel("API Reference")
+        api_layout.addWidget(api_label)
+        
+        self.api_tree = QTreeWidget()
+        self.api_tree.setHeaderLabels(["Function", "Description"])
+        self.api_tree.setColumnWidth(0, 150)
+        api_layout.addWidget(self.api_tree)
+        
+        splitter.addWidget(api_widget)
+        
+        # Editor
         editor_widget = QWidget()
         editor_layout = QVBoxLayout(editor_widget)
         
-        # Editor tabs
-        self.tab_widget = QTabWidget()
+        # Editor toolbar
+        toolbar = QHBoxLayout()
         
-        # Script tab
-        self.script_editor = QPlainTextEdit()
-        self.script_editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
-        self.script_editor.setTabStopDistance(40)
-        self.highlighter = ScriptHighlighter(self.script_editor.document())
-        self.tab_widget.addTab(self.script_editor, "Script")
+        run_btn = QPushButton("Run")
+        run_btn.clicked.connect(self._run_script)
+        toolbar.addWidget(run_btn)
         
-        # Events tab
-        self.events_editor = QPlainTextEdit()
-        self.events_editor.setReadOnly(True)
-        self.tab_widget.addTab(self.events_editor, "Recorded Events")
+        stop_btn = QPushButton("Stop")
+        stop_btn.clicked.connect(self._stop_script)
+        toolbar.addWidget(stop_btn)
         
-        editor_layout.addWidget(self.tab_widget)
+        check_btn = QPushButton("Check Syntax")
+        check_btn.clicked.connect(self._check_syntax)
+        toolbar.addWidget(check_btn)
+        
+        toolbar.addStretch()
+        
+        editor_layout.addLayout(toolbar)
+        
+        # Editor area
+        self.editor = QPlainTextEdit()
+        self.editor.setFont(QFont("Consolas", 10))
+        self.editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        self.editor.textChanged.connect(self._on_text_changed)
+        
+        # Syntax highlighter
+        self.highlighter = PythonHighlighter(self.editor.document())
+        
+        editor_layout.addWidget(self.editor)
         
         splitter.addWidget(editor_widget)
-        splitter.setSizes([200, 800])
         
-        layout.addWidget(splitter)
+        # Set initial splitter sizes
+        splitter.setSizes([200, 600])
         
         # Status bar
         self.status_bar = QStatusBar()
         layout.addWidget(self.status_bar)
         
-        # Buttons
-        button_layout = QHBoxLayout()
+        # Context menu
+        self.editor.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.editor.customContextMenuRequested.connect(self._show_context_menu)
         
-        self.ok_button = QPushButton("OK")
-        self.ok_button.clicked.connect(self.accept)
-        
-        self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.clicked.connect(self.reject)
-        
-        button_layout.addWidget(self.ok_button)
-        button_layout.addWidget(self.cancel_button)
-        
-        layout.addLayout(button_layout)
+        # Load API documentation
+        self._load_api_docs()
 
-    def _load_script(self):
-        """Load macro script and events."""
+    def _load_api_docs(self):
+        """Load API documentation."""
         try:
-            # Load script if exists
-            if self.macro.script:
-                self.script_editor.setPlainText(self.macro.script)
+            docs = macro_script.get_api_docs()
             
-            # Load events
-            events_text = ""
-            for event in self.macro.events:
-                events_text += f"{event.type.value}: {event.data}\n"
-            self.events_editor.setPlainText(events_text)
+            # Clear tree
+            self.api_tree.clear()
+            
+            # Add functions
+            for name, doc in docs.items():
+                item = QTreeWidgetItem([name, ""])
+                item.setToolTip(1, doc)
+                self.api_tree.addTopLevelItem(item)
+            
+            # Sort items
+            self.api_tree.sortItems(0, Qt.SortOrder.AscendingOrder)
             
         except Exception as e:
-            self.logger.error(f"Error loading script: {e}")
-            self.status_bar.showMessage("Error loading script", 5000)
+            self.logger.error(f"Failed to load API docs: {e}")
 
-    def _save_script(self):
-        """Save script changes."""
+    def _show_context_menu(self, pos):
+        """Show editor context menu."""
         try:
-            script = self.script_editor.toPlainText()
+            menu = self.editor.createStandardContextMenu()
             
-            # Check syntax before saving
-            if not self._check_syntax(show_success=False):
-                return
+            # Add custom actions
+            menu.addSeparator()
             
-            # Update macro
-            self.macro.script = script
-            if self.macro.metadata.type == MacroType.RECORDED:
-                self.macro.metadata.type = MacroType.HYBRID
+            check_action = menu.addAction("Check Syntax")
+            check_action.triggered.connect(self._check_syntax)
             
-            self.status_bar.showMessage("Script saved", 3000)
+            run_action = menu.addAction("Run")
+            run_action.triggered.connect(self._run_script)
+            
+            menu.exec(self.editor.mapToGlobal(pos))
             
         except Exception as e:
-            self.logger.error(f"Error saving script: {e}")
-            self.status_bar.showMessage("Error saving script", 5000)
+            self.logger.error(f"Failed to show context menu: {e}")
 
-    def _check_syntax(self, show_success: bool = True) -> bool:
+    def _on_text_changed(self):
+        """Handle text changes."""
+        try:
+            self._modified = True
+            self.script_changed.emit()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to handle text change: {e}")
+
+    def _check_syntax(self):
         """Check script syntax."""
         try:
-            script = self.script_editor.toPlainText()
+            script = self.editor.toPlainText()
+            error = macro_script.validate_script(script)
             
-            # Create temporary script object
-            temp_script = MacroScript(script)
-            
-            # Try to compile
-            if temp_script.compile():
-                if show_success:
-                    self.status_bar.showMessage("Syntax check passed", 3000)
-                return True
-            else:
-                self.status_bar.showMessage(
-                    f"Syntax error: {temp_script.last_error}",
-                    5000
+            if error:
+                self.status_bar.showMessage(f"Syntax error: {error}", 5000)
+                QMessageBox.warning(
+                    self,
+                    "Syntax Error",
+                    str(error)
                 )
-                return False
+            else:
+                self.status_bar.showMessage("Syntax check passed", 5000)
             
         except Exception as e:
-            self.logger.error(f"Error checking syntax: {e}")
-            self.status_bar.showMessage(f"Error checking syntax: {e}", 5000)
-            return False
+            self.logger.error(f"Failed to check syntax: {e}")
 
-    def _test_run(self):
-        """Test run the script."""
+    def _run_script(self):
+        """Run current script."""
         try:
-            script = self.script_editor.toPlainText()
+            script = self.editor.toPlainText()
             
             # Check syntax first
-            if not self._check_syntax(show_success=False):
+            error = macro_script.validate_script(script)
+            if error:
+                QMessageBox.warning(
+                    self,
+                    "Syntax Error",
+                    str(error)
+                )
                 return
             
-            # Create temporary script
-            temp_script = MacroScript(script)
-            
-            # Run in test mode
-            if temp_script.run(test_mode=True):
-                self.status_bar.showMessage("Test run successful", 3000)
+            # Run script
+            if macro_script.run_script(script):
+                self.status_bar.showMessage("Script running...", 5000)
             else:
-                self.status_bar.showMessage(
-                    f"Test run failed: {temp_script.last_error}",
-                    5000
-                )
+                self.status_bar.showMessage("Failed to run script", 5000)
             
         except Exception as e:
-            self.logger.error(f"Error during test run: {e}")
-            self.status_bar.showMessage(f"Error during test run: {e}", 5000)
+            self.logger.error(f"Failed to run script: {e}")
 
-    def _insert_command(self, command: str):
-        """Insert command at cursor position."""
+    def _stop_script(self):
+        """Stop script execution."""
         try:
-            cursor = self.script_editor.textCursor()
-            cursor.insertText(command)
-            self.script_editor.setFocus()
+            if macro_script.stop_script():
+                self.status_bar.showMessage("Script stopped", 5000)
             
         except Exception as e:
-            self.logger.error(f"Error inserting command: {e}")
+            self.logger.error(f"Failed to stop script: {e}")
 
-    def accept(self):
-        """Handle dialog acceptance."""
-        try:
-            # Save changes before accepting
-            self._save_script()
-            
-            if self.macro.script:
-                super().accept()
-            
-        except Exception as e:
-            self.logger.error(f"Error accepting dialog: {e}")
-            self.status_bar.showMessage("Error saving changes", 5000)
+    def get_script(self) -> str:
+        """Get current script."""
+        return self.editor.toPlainText()
 
-    def closeEvent(self, event):
-        """Handle window close event."""
+    def set_script(self, script: str):
+        """Set current script."""
         try:
-            if self.script_editor.document().isModified():
-                reply = QMessageBox.question(
-                    self,
-                    "Save Changes",
-                    "Do you want to save your changes?",
-                    QMessageBox.StandardButton.Yes |
-                    QMessageBox.StandardButton.No |
-                    QMessageBox.StandardButton.Cancel
-                )
-                
-                if reply == QMessageBox.StandardButton.Yes:
-                    self._save_script()
-                    event.accept()
-                elif reply == QMessageBox.StandardButton.No:
-                    event.accept()
-                else:
-                    event.ignore()
-            else:
-                event.accept()
+            self.editor.setPlainText(script)
+            self._modified = False
             
         except Exception as e:
-            self.logger.error(f"Error handling close event: {e}")
-            event.accept()
+            self.logger.error(f"Failed to set script: {e}")
+
+    def is_modified(self) -> bool:
+        """Check if script was modified."""
+        return self._modified
+
+    def clear(self):
+        """Clear editor."""
+        try:
+            self.editor.clear()
+            self._modified = False
+            
+        except Exception as e:
+            self.logger.error(f"Failed to clear editor: {e}")
