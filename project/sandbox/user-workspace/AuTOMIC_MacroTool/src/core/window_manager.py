@@ -1,5 +1,6 @@
 """
-Window management and detection module.
+Window management module.
+Copyright (c) 2025 AtomicArk
 """
 
 import logging
@@ -7,352 +8,293 @@ import threading
 from typing import Dict, List, Optional, Tuple, Callable
 from dataclasses import dataclass
 import win32gui
-import win32api
 import win32con
 import win32process
-import cv2
-import numpy as np
-from PIL import ImageGrab
+import win32api
+import psutil
+from ctypes import windll, byref, create_unicode_buffer, sizeof
+from ctypes.wintypes import RECT, DWORD
 
 from ..utils.debug_helper import get_debug_helper
 
 @dataclass
 class WindowInfo:
     """Window information container."""
-    hwnd: int
+    handle: int
     title: str
     class_name: str
     process_id: int
     process_name: str
-    rect: Tuple[int, int, int, int]  # left, top, right, bottom
+    rect: RECT
     is_visible: bool
-    is_minimized: bool
-    is_maximized: bool
-    dpi_scale: float
+    is_enabled: bool
+    is_unicode: bool
+    is_zoomed: bool
+    parent: Optional[int] = None
+    children: List[int] = None
 
-class SmartWindowManager:
+    def __post_init__(self):
+        if self.children is None:
+            self.children = []
+
+class WindowManager:
     """Manages window detection and interaction."""
     
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
+
     def __init__(self):
-        self.logger = logging.getLogger('WindowManager')
-        self.debug = get_debug_helper()
-        
-        # State
-        self._windows: Dict[int, WindowInfo] = {}
-        self._active_window: Optional[int] = None
-        self._lock = threading.Lock()
-        
-        # Window monitoring
-        self._monitor_thread: Optional[threading.Thread] = None
-        self._stop_flag = threading.Event()
-        
-        # Callbacks
-        self.on_window_change: Optional[Callable[[int], None]] = None
-        
-        # Start monitoring
-        self._start_monitoring()
+        if not hasattr(self, '_initialized'):
+            self.logger = logging.getLogger('WindowManager')
+            self.debug = get_debug_helper()
+            
+            # State
+            self._windows: Dict[int, WindowInfo] = {}
+            self._active_window: Optional[int] = None
+            self._window_callbacks: Dict[str, List[Callable]] = {}
+            
+            # Initialize
+            self._initialized = True
 
-    def _start_monitoring(self):
-        """Start window monitoring thread."""
+    def refresh_windows(self) -> None:
+        """Refresh window list."""
         try:
-            def monitor():
-                while not self._stop_flag.is_set():
-                    try:
-                        # Get current active window
-                        hwnd = win32gui.GetForegroundWindow()
-                        
-                        # Check if changed
-                        if hwnd != self._active_window:
-                            with self._lock:
-                                self._active_window = hwnd
-                                if self.on_window_change:
-                                    self.on_window_change(hwnd)
-                        
-                        # Update window list periodically
-                        self.refresh_windows()
-                        
-                        # Sleep
-                        self._stop_flag.wait(0.1)
-                        
-                    except Exception as e:
-                        self.logger.error(f"Error in window monitor: {e}")
-            
-            self._monitor_thread = threading.Thread(
-                target=monitor,
-                daemon=True
-            )
-            self._monitor_thread.start()
-            
-        except Exception as e:
-            self.logger.error(f"Failed to start window monitor: {e}")
-
-    def refresh_windows(self):
-        """Update window list."""
-        try:
-            windows = {}
-            
-            def enum_windows_callback(hwnd, _):
-                if win32gui.IsWindowVisible(hwnd):
-                    try:
-                        info = self._get_window_info(hwnd)
-                        if info:
-                            windows[hwnd] = info
-                    except:
-                        pass
-            
-            win32gui.EnumWindows(enum_windows_callback, None)
-            
             with self._lock:
-                self._windows = windows
+                self._windows.clear()
+                win32gui.EnumWindows(self._enum_window_proc, None)
+                
+        except Exception as e:
+            self.logger.error(f"Failed to refresh windows: {e}")
+
+    def _enum_window_proc(self, hwnd: int, _) -> bool:
+        """Window enumeration callback."""
+        try:
+            # Skip invisible windows
+            if not win32gui.IsWindowVisible(hwnd):
+                return True
+            
+            # Get window info
+            info = self._get_window_info(hwnd)
+            if info:
+                self._windows[hwnd] = info
+            
+            return True
             
         except Exception as e:
-            self.logger.error(f"Error refreshing windows: {e}")
+            self.logger.error(f"Failed to enumerate window: {e}")
+            return True
 
     def _get_window_info(self, hwnd: int) -> Optional[WindowInfo]:
         """Get window information."""
         try:
-            # Skip invalid windows
-            if not hwnd or not win32gui.IsWindow(hwnd):
-                return None
-            
             # Get window properties
             title = win32gui.GetWindowText(hwnd)
             class_name = win32gui.GetClassName(hwnd)
             
-            # Skip empty or system windows
+            # Skip system windows
             if not title or class_name in ['Shell_TrayWnd', 'Progman']:
                 return None
             
             # Get process info
-            _, process_id = win32process.GetWindowThreadProcessId(hwnd)
-            process_handle = win32api.OpenProcess(
-                win32con.PROCESS_QUERY_INFORMATION | win32con.PROCESS_VM_READ,
-                False,
-                process_id
-            )
-            process_name = win32process.GetModuleFileNameEx(process_handle, 0)
-            process_handle.close()
+            process_id = DWORD()
+            win32process.GetWindowThreadProcessId(hwnd, byref(process_id))
             
-            # Get window state
-            placement = win32gui.GetWindowPlacement(hwnd)
-            is_minimized = placement[1] == win32con.SW_SHOWMINIMIZED
-            is_maximized = placement[1] == win32con.SW_SHOWMAXIMIZED
+            try:
+                process = psutil.Process(process_id.value)
+                process_name = process.name()
+            except psutil.NoSuchProcess:
+                process_name = "Unknown"
             
             # Get window rect
-            rect = win32gui.GetWindowRect(hwnd)
+            rect = RECT()
+            win32gui.GetWindowRect(hwnd, byref(rect))
             
-            # Get DPI scale
-            dpi = win32gui.GetDpiForWindow(hwnd)
-            dpi_scale = dpi / 96.0
+            # Get window state
+            is_visible = win32gui.IsWindowVisible(hwnd)
+            is_enabled = win32gui.IsWindowEnabled(hwnd)
+            is_unicode = win32gui.IsWindowUnicode(hwnd)
+            is_zoomed = win32gui.IsZoomed(hwnd)
+            
+            # Get parent/child relationship
+            parent = win32gui.GetParent(hwnd)
+            children = []
+            
+            def enum_child_proc(child_hwnd: int, _) -> bool:
+                children.append(child_hwnd)
+                return True
+            
+            win32gui.EnumChildWindows(hwnd, enum_child_proc, None)
             
             return WindowInfo(
-                hwnd=hwnd,
+                handle=hwnd,
                 title=title,
                 class_name=class_name,
-                process_id=process_id,
+                process_id=process_id.value,
                 process_name=process_name,
                 rect=rect,
-                is_visible=win32gui.IsWindowVisible(hwnd),
-                is_minimized=is_minimized,
-                is_maximized=is_maximized,
-                dpi_scale=dpi_scale
+                is_visible=is_visible,
+                is_enabled=is_enabled,
+                is_unicode=is_unicode,
+                is_zoomed=is_zoomed,
+                parent=parent if parent else None,
+                children=children
             )
             
         except Exception as e:
-            self.logger.error(f"Error getting window info: {e}")
+            self.logger.error(f"Failed to get window info: {e}")
             return None
 
-    def get_window_info(self, hwnd: int) -> Optional[WindowInfo]:
-        """Get information about specific window."""
+    def get_window(self, hwnd: int) -> Optional[WindowInfo]:
+        """Get window information by handle."""
         try:
             with self._lock:
-                # Try from cache first
-                if hwnd in self._windows:
-                    return self._windows[hwnd]
-                
-                # Get fresh info
-                return self._get_window_info(hwnd)
+                if hwnd not in self._windows:
+                    info = self._get_window_info(hwnd)
+                    if info:
+                        self._windows[hwnd] = info
+                return self._windows.get(hwnd)
             
         except Exception as e:
-            self.logger.error(f"Error getting window info: {e}")
+            self.logger.error(f"Failed to get window: {e}")
+            return None
+
+    def find_window(self, title: str = None, class_name: str = None,
+                   process_name: str = None) -> Optional[WindowInfo]:
+        """Find window by properties."""
+        try:
+            self.refresh_windows()
+            
+            with self._lock:
+                for window in self._windows.values():
+                    if title and title.lower() not in window.title.lower():
+                        continue
+                    if class_name and class_name != window.class_name:
+                        continue
+                    if process_name and process_name.lower() not in window.process_name.lower():
+                        continue
+                    return window
+                
+                return None
+            
+        except Exception as e:
+            self.logger.error(f"Failed to find window: {e}")
             return None
 
     def get_active_window(self) -> Optional[WindowInfo]:
-        """Get active window information."""
+        """Get active window."""
         try:
             hwnd = win32gui.GetForegroundWindow()
-            return self.get_window_info(hwnd)
-        except Exception as e:
-            self.logger.error(f"Error getting active window: {e}")
-            return None
-
-    def get_window_at(self, x: int, y: int) -> Optional[WindowInfo]:
-        """Get window at screen coordinates."""
-        try:
-            hwnd = win32gui.WindowFromPoint((x, y))
-            return self.get_window_info(hwnd)
-        except Exception as e:
-            self.logger.error(f"Error getting window at point: {e}")
-            return None
-
-    def get_window_by_title(self, title: str) -> Optional[WindowInfo]:
-        """Find window by title."""
-        try:
-            with self._lock:
-                for window in self._windows.values():
-                    if title.lower() in window.title.lower():
-                        return window
-            return None
-        except Exception as e:
-            self.logger.error(f"Error finding window: {e}")
-            return None
-
-    def get_window_screenshot(self, hwnd: int) -> Optional[np.ndarray]:
-        """Get screenshot of specific window."""
-        try:
-            window = self.get_window_info(hwnd)
-            if not window:
-                return None
-            
-            # Get window bounds
-            left, top, right, bottom = window.rect
-            width = right - left
-            height = bottom - top
-            
-            # Capture window
-            screenshot = ImageGrab.grab(bbox=(left, top, right, bottom))
-            
-            # Convert to OpenCV format
-            return cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+            return self.get_window(hwnd)
             
         except Exception as e:
-            self.logger.error(f"Error capturing window: {e}")
+            self.logger.error(f"Failed to get active window: {e}")
             return None
 
-    def bring_window_to_front(self, hwnd: int) -> bool:
-        """Bring window to foreground."""
+    def bring_to_front(self, hwnd: int) -> bool:
+        """Bring window to front."""
         try:
             if not win32gui.IsWindow(hwnd):
                 return False
             
-            # Show window if minimized
-            if win32gui.IsIconic(hwnd):
+            # Get window state
+            placement = win32gui.GetWindowPlacement(hwnd)
+            
+            # Restore if minimized
+            if placement[1] == win32con.SW_SHOWMINIMIZED:
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             
-            # Bring to front
+            # Set foreground window
             win32gui.SetForegroundWindow(hwnd)
+            
             return True
             
         except Exception as e:
-            self.logger.error(f"Error bringing window to front: {e}")
+            self.logger.error(f"Failed to bring window to front: {e}")
             return False
 
-    def set_window_pos(self, hwnd: int, x: int, y: int) -> bool:
-        """Set window position."""
+    def get_window_rect(self, hwnd: int) -> Optional[Tuple[int, int, int, int]]:
+        """Get window rectangle."""
         try:
             if not win32gui.IsWindow(hwnd):
-                return False
+                return None
             
-            # Get current size
-            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-            width = right - left
-            height = bottom - top
-            
-            # Move window
-            win32gui.SetWindowPos(
-                hwnd,
-                0,
-                x,
-                y,
-                width,
-                height,
-                win32con.SWP_NOSIZE | win32con.SWP_NOZORDER
-            )
-            return True
+            rect = win32gui.GetWindowRect(hwnd)
+            return rect
             
         except Exception as e:
-            self.logger.error(f"Error setting window position: {e}")
-            return False
+            self.logger.error(f"Failed to get window rect: {e}")
+            return None
 
-    def set_window_size(self, hwnd: int, width: int, height: int) -> bool:
-        """Set window size."""
+    def get_client_rect(self, hwnd: int) -> Optional[Tuple[int, int, int, int]]:
+        """Get client area rectangle."""
         try:
             if not win32gui.IsWindow(hwnd):
-                return False
+                return None
             
-            # Get current position
-            left, top, _, _ = win32gui.GetWindowRect(hwnd)
+            rect = win32gui.GetClientRect(hwnd)
+            point = win32gui.ClientToScreen(hwnd, (0, 0))
             
-            # Resize window
-            win32gui.SetWindowPos(
-                hwnd,
-                0,
-                left,
-                top,
-                width,
-                height,
-                win32con.SWP_NOMOVE | win32con.SWP_NOZORDER
+            return (
+                point[0],
+                point[1],
+                point[0] + rect[2],
+                point[1] + rect[3]
             )
-            return True
             
         except Exception as e:
-            self.logger.error(f"Error setting window size: {e}")
-            return False
-
-    def get_relative_pos(self, hwnd: int, x: int, y: int) -> Optional[Tuple[float, float]]:
-        """Convert absolute coordinates to window-relative."""
-        try:
-            window = self.get_window_info(hwnd)
-            if not window:
-                return None
-            
-            # Get window bounds
-            left, top, right, bottom = window.rect
-            width = right - left
-            height = bottom - top
-            
-            # Calculate relative position
-            rel_x = (x - left) / width
-            rel_y = (y - top) / height
-            
-            return (rel_x, rel_y)
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating relative position: {e}")
+            self.logger.error(f"Failed to get client rect: {e}")
             return None
 
-    def get_absolute_pos(self, hwnd: int, rel_x: float, rel_y: float) -> Optional[Tuple[int, int]]:
-        """Convert window-relative coordinates to absolute."""
+    def register_callback(self, event: str, callback: Callable) -> None:
+        """Register window event callback."""
         try:
-            window = self.get_window_info(hwnd)
-            if not window:
-                return None
-            
-            # Get window bounds
-            left, top, right, bottom = window.rect
-            width = right - left
-            height = bottom - top
-            
-            # Calculate absolute position
-            abs_x = int(left + (width * rel_x))
-            abs_y = int(top + (height * rel_y))
-            
-            return (abs_x, abs_y)
+            with self._lock:
+                if event not in self._window_callbacks:
+                    self._window_callbacks[event] = []
+                self._window_callbacks[event].append(callback)
             
         except Exception as e:
-            self.logger.error(f"Error calculating absolute position: {e}")
-            return None
+            self.logger.error(f"Failed to register callback: {e}")
+
+    def unregister_callback(self, event: str, callback: Callable) -> None:
+        """Unregister window event callback."""
+        try:
+            with self._lock:
+                if event in self._window_callbacks:
+                    self._window_callbacks[event].remove(callback)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to unregister callback: {e}")
+
+    def _notify_callbacks(self, event: str, *args, **kwargs) -> None:
+        """Notify registered callbacks."""
+        try:
+            with self._lock:
+                if event in self._window_callbacks:
+                    for callback in self._window_callbacks[event]:
+                        try:
+                            callback(*args, **kwargs)
+                        except Exception as e:
+                            self.logger.error(f"Callback error: {e}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to notify callbacks: {e}")
 
     def cleanup(self):
         """Clean up resources."""
         try:
-            self._stop_flag.set()
-            
-            if self._monitor_thread and self._monitor_thread.is_alive():
-                self._monitor_thread.join(timeout=1.0)
+            with self._lock:
+                self._windows.clear()
+                self._window_callbacks.clear()
             
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
 
 # Global instance
-window_manager = SmartWindowManager()
+window_manager = WindowManager()
