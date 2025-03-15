@@ -1,148 +1,240 @@
 {
     "app": {
         "name": "AuTOMIC MacroTool",
-        "version": "1.0.0",
-        "author": "AtomicArk",
-        "description": "Outil Avancé d'Enregistrement et d'Automatisation de Macros"
-    },
-    "general": {
-        "ok": "OK",
-        "cancel": "Annuler",
-        "apply": "Appliquer",
-        "save": "Enregistrer",
-        "delete": "Supprimer",
-        "edit": "Modifier",
-        "close": "Fermer",
-        "error": "Erreur",
-        "warning": "Avertissement",
-        "info": "Information",
-        "success": "Succès",
-        "loading": "Chargement...",
-        "processing": "Traitement...",
-        "please_wait": "Veuillez patienter..."
+        "version": "Version %s",
+        "copyright": "© 2025 AtomicArk. Tous droits réservés.",
+        "website": "https://github.com/Atomic-Ark/AuTOMIC_MacroTool"
     },
     "menu": {
-        "file": "Fichier",
-        "edit": "Édition",
-        "view": "Affichage",
-        "tools": "Outils",
-        "help": "Aide",
-        "new_macro": "Nouvelle Macro",
-        "open_macro": "Ouvrir Macro",
-        "save_macro": "Enregistrer Macro",
-        "save_as": "Enregistrer Sous",
-        "import": "Importer",
-        "export": "Exporter",
-        "settings": "Paramètres",
-        "exit": "Quitter"
+        "file": {
+            "title": "Fichier",
+            "new_macro": "Nouvelle Macro",
+            "open_macro": "Ouvrir une Macro...",
+            "save_macro": "Enregistrer la Macro",
+            "save_as": "Enregistrer sous...",
+            "import": "Importer...",
+            "export": "Exporter...",
+            "settings": "Paramètres",
+            "exit": "Quitter"
+        },
+        "edit": {
+            "title": "Édition",
+            "undo": "Annuler",
+            "redo": "Rétablir",
+            "cut": "Couper",
+            "copy": "Copier",
+            "paste": "Coller",
+            "delete": "Supprimer",
+            "select_all": "Tout sélectionner"
+        },
+        "view": {
+            "title": "Affichage",
+            "toolbar": "Barre d'outils",
+            "status_bar": "Barre d'état",
+            "macro_list": "Liste des Macros",
+            "script_editor": "Éditeur de Scripts"
+        },
+        "macro": {
+            "title": "Macro",
+            "record": "Enregistrer",
+            "stop": "Arrêter",
+            "play": "Lire",
+            "pause": "Pause",
+            "edit": "Modifier",
+            "delete": "Supprimer",
+            "properties": "Propriétés"
+        },
+        "script": {
+            "title": "Script",
+            "new": "Nouveau Script",
+            "open": "Ouvrir un Script...",
+            "save": "Enregistrer le Script",
+            "save_as": "Enregistrer le Script sous...",
+            "run": "Exécuter le Script",
+            "stop": "Arrêter le Script",
+            "check": "Vérifier la Syntaxe"
+        },
+        "help": {
+            "title": "Aide",
+            "documentation": "Documentation",
+            "api_reference": "Référence API",
+            "check_updates": "Vérifier les mises à jour",
+            "about": "À propos"
+        }
     },
     "toolbar": {
+        "new_macro": "Nouvelle Macro",
+        "open_macro": "Ouvrir une Macro",
+        "save_macro": "Enregistrer la Macro",
         "record": "Enregistrer",
         "stop": "Arrêter",
         "play": "Lire",
         "pause": "Pause",
-        "settings": "Paramètres",
-        "help": "Aide"
+        "settings": "Paramètres"
     },
-    "macro": {
-        "slot": "Emplacement",
-        "name": "Nom",
-        "type": "Type",
-        "created": "Créé le",
-        "modified": "Modifié le",
-        "description": "Description",
-        "author": "Auteur",
-        "version": "Version",
-        "tags": "Tags",
-        "recorded": "Enregistré",
-        "scripted": "Scripté",
-        "hybrid": "Hybride",
-        "empty_slot": "Emplacement Vide",
-        "recording": "Enregistrement...",
-        "playing": "Lecture...",
+    "status": {
+        "ready": "Prêt",
+        "recording": "Enregistrement en cours...",
+        "playing": "Lecture en cours...",
         "paused": "En pause",
         "stopped": "Arrêté",
-        "no_macro": "Aucune macro chargée",
-        "delete_confirm": "Êtes-vous sûr de vouloir supprimer cette macro ?",
-        "overwrite_confirm": "La macro existe déjà. Voulez-vous l'écraser ?"
+        "error": "Erreur : %s",
+        "saved": "Enregistré",
+        "modified": "Modifié"
     },
-    "settings": {
-        "general": "Général",
-        "recording": "Enregistrement",
-        "playback": "Lecture",
-        "hotkeys": "Raccourcis",
-        "advanced": "Avancé",
-        "language": "Langue",
-        "theme": "Thème",
-        "ui_scale": "Échelle de l'interface",
-        "autostart": "Démarrer avec Windows",
-        "minimize_tray": "Réduire dans la barre des tâches",
-        "check_updates": "Vérifier les mises à jour",
-        "record_mouse": "Enregistrer la souris",
-        "record_keyboard": "Enregistrer le clavier",
-        "record_delays": "Enregistrer les délais",
-        "min_delay": "Délai minimum",
-        "window_mode": "Mode fenêtre",
-        "macro_directory": "Répertoire des macros",
-        "playback_mode": "Mode de lecture",
-        "repeat_count": "Nombre de répétitions",
-        "speed": "Vitesse",
-        "randomize_delays": "Délais aléatoires",
-        "random_factor": "Facteur aléatoire",
-        "stop_on_input": "Arrêter sur entrée",
-        "restore_mouse": "Restaurer position souris",
-        "stealth_mode": "Mode furtif",
-        "panic_hotkey": "Touche panique",
-        "debug_level": "Niveau de débogage",
-        "performance_mode": "Mode performance",
-        "reset_settings": "Réinitialiser paramètres",
-        "reset_confirm": "Voulez-vous vraiment réinitialiser tous les paramètres ?"
+    "dialogs": {
+        "macro": {
+            "new": {
+                "title": "Nouvelle Macro",
+                "name": "Nom :",
+                "description": "Description :",
+                "type": "Type :",
+                "window": "Fenêtre",
+                "screen": "Écran",
+                "directx": "DirectX"
+            },
+            "properties": {
+                "title": "Propriétés de la Macro",
+                "name": "Nom :",
+                "description": "Description :",
+                "author": "Auteur :",
+                "version": "Version :",
+                "created": "Créé le :",
+                "modified": "Modifié le :",
+                "type": "Type :",
+                "target": "Fenêtre cible :",
+                "hotkey": "Raccourci :",
+                "slot": "Emplacement :"
+            },
+            "delete": {
+                "title": "Supprimer la Macro",
+                "confirm": "Voulez-vous vraiment supprimer cette macro ?",
+                "multiple": "Voulez-vous vraiment supprimer %d macros ?"
+            },
+            "save": {
+                "title": "Enregistrer la Macro",
+                "confirm": "Enregistrer les modifications de la macro ?",
+                "error": "Échec de l'enregistrement de la macro"
+            }
+        },
+        "script": {
+            "new": {
+                "title": "Nouveau Script",
+                "template": "Utiliser un modèle"
+            },
+            "save": {
+                "title": "Enregistrer le Script",
+                "confirm": "Enregistrer les modifications du script ?",
+                "error": "Échec de l'enregistrement du script"
+            },
+            "syntax": {
+                "title": "Erreur de Syntaxe",
+                "error": "Erreur de syntaxe : %s"
+            },
+            "run": {
+                "title": "Exécuter le Script",
+                "error": "Échec de l'exécution du script : %s"
+            }
+        },
+        "settings": {
+            "title": "Paramètres",
+            "general": {
+                "title": "Général",
+                "language": "Langue :",
+                "theme": "Thème :",
+                "ui_scale": "Échelle de l'interface :",
+                "autostart": "Démarrer avec Windows",
+                "minimize": "Démarrer minimisé",
+                "updates": "Vérifier les mises à jour"
+            },
+            "recording": {
+                "title": "Enregistrement",
+                "mouse": "Enregistrer la souris",
+                "keyboard": "Enregistrer le clavier",
+                "delays": "Enregistrer les délais",
+                "min_delay": "Délai minimum :",
+                "window_mode": "Mode fenêtre",
+                "directx_mode": "Mode DirectX"
+            },
+            "playback": {
+                "title": "Lecture",
+                "repeat": "Mode de répétition :",
+                "count": "Nombre de répétitions :",
+                "speed": "Vitesse :",
+                "random": "Délais aléatoires",
+                "stop": "Arrêter sur entrée",
+                "restore": "Restaurer la position de la souris",
+                "stealth": "Mode furtif"
+            },
+            "hotkeys": {
+                "title": "Raccourcis",
+                "record": "Démarrer/Arrêter l'enregistrement",
+                "play": "Démarrer/Arrêter la lecture",
+                "pause": "Mettre en pause la lecture",
+                "script": "Exécuter/Arrêter le script",
+                "panic": "Bouton panique",
+                "show": "Afficher/Masquer la fenêtre"
+            },
+            "advanced": {
+                "title": "Avancé",
+                "debug": "Niveau de débogage :",
+                "performance": "Mode performance",
+                "macro_dir": "Répertoire des macros :",
+                "backup_dir": "Répertoire des sauvegardes :",
+                "browse": "Parcourir..."
+            }
+        },
+        "about": {
+            "title": "À propos de %s",
+            "version": "Version %s",
+            "copyright": "© 2025 AtomicArk. Tous droits réservés.",
+            "description": "Outil avancé d'enregistrement et d'automatisation de macros",
+            "website": "Visiter le site web",
+            "license": "Licence",
+            "credits": "Crédits",
+            "close": "Fermer"
+        },
+        "error": {
+            "title": "Erreur",
+            "unknown": "Une erreur inconnue s'est produite",
+            "file_not_found": "Fichier non trouvé",
+            "access_denied": "Accès refusé",
+            "invalid_format": "Format de fichier invalide",
+            "already_exists": "Le fichier existe déjà"
+        }
+    },
+    "tray": {
+        "show": "Afficher",
+        "hide": "Masquer",
+        "record": "Enregistrer",
+        "stop": "Arrêter",
+        "play": "Lire",
+        "pause": "Pause",
+        "exit": "Quitter"
+    },
+    "slots": {
+        "empty": "Emplacement vide",
+        "drag": "Glisser une macro ici",
+        "clear": "Vider l'emplacement",
+        "assign": "Assigner une macro"
     },
     "script": {
-        "editor": "Éditeur de script",
-        "check_syntax": "Vérifier la syntaxe",
-        "test_run": "Test",
-        "save_script": "Enregistrer le script",
-        "syntax_ok": "Vérification de syntaxe réussie",
-        "syntax_error": "Erreur de syntaxe : {0}",
-        "test_success": "Test réussi",
-        "test_error": "Échec du test : {0}",
-        "unsaved_changes": "Vous avez des modifications non enregistrées. Voulez-vous les sauvegarder ?"
-    },
-    "updates": {
-        "checking": "Recherche de mises à jour...",
-        "available": "Mise à jour disponible",
-        "up_to_date": "Application à jour",
-        "error": "Erreur de vérification des mises à jour",
-        "download": "Télécharger la mise à jour",
-        "installing": "Installation de la mise à jour...",
-        "restart_required": "Redémarrage nécessaire pour terminer la mise à jour"
-    },
-    "errors": {
-        "recording_failed": "Impossible de démarrer l'enregistrement",
-        "playback_failed": "Impossible de démarrer la lecture",
-        "save_failed": "Impossible d'enregistrer la macro",
-        "load_failed": "Impossible de charger la macro",
-        "delete_failed": "Impossible de supprimer la macro",
-        "settings_failed": "Impossible d'enregistrer les paramètres",
-        "driver_failed": "Impossible d'installer le pilote",
-        "permission_denied": "Permission refusée",
-        "file_not_found": "Fichier non trouvé",
-        "invalid_format": "Format de fichier invalide",
-        "unknown_error": "Une erreur inconnue est survenue"
-    },
-    "help": {
-        "getting_started": "Premiers pas",
-        "recording": "Enregistrement de macros",
-        "playback": "Lecture de macros",
-        "scripting": "Scripts de macro",
-        "settings": "Guide des paramètres",
-        "troubleshooting": "Dépannage",
-        "about": "À propos",
-        "support": "Support",
-        "documentation": "Documentation",
-        "check_updates": "Vérifier les mises à jour",
-        "report_bug": "Signaler un bug",
-        "feedback": "Envoyer un commentaire"
+        "template": "# Script AuTOMIC MacroTool\n# Créé le : %s\n\n# Importer les modules requis\nfrom time import sleep\n\n# Votre code ici\n",
+        "api": {
+            "key_press": "Simuler une entrée clavier",
+            "mouse_move": "Déplacer le curseur de la souris",
+            "mouse_click": "Simuler un clic de souris",
+            "mouse_scroll": "Simuler la molette de la souris",
+            "get_window": "Obtenir les informations de la fenêtre",
+            "find_window": "Rechercher une fenêtre par titre",
+            "get_active_window": "Obtenir la fenêtre active",
+            "bring_to_front": "Mettre la fenêtre au premier plan",
+            "sleep": "Attendre un temps spécifié",
+            "log": "Enregistrer un message",
+            "debug": "Enregistrer un message de débogage",
+            "wait_for_window": "Attendre l'apparition d'une fenêtre",
+            "repeat": "Répéter une action plusieurs fois",
+            "wait_until": "Attendre qu'une condition soit remplie"
+        }
     }
 }
