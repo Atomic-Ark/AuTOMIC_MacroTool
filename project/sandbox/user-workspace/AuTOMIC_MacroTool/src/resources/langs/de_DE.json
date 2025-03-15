@@ -1,148 +1,240 @@
 {
     "app": {
         "name": "AuTOMIC MacroTool",
-        "version": "1.0.0",
-        "author": "AtomicArk",
-        "description": "Fortgeschrittenes Makro-Aufzeichnungs- und Automatisierungswerkzeug"
-    },
-    "general": {
-        "ok": "OK",
-        "cancel": "Abbrechen",
-        "apply": "Übernehmen",
-        "save": "Speichern",
-        "delete": "Löschen",
-        "edit": "Bearbeiten",
-        "close": "Schließen",
-        "error": "Fehler",
-        "warning": "Warnung",
-        "info": "Information",
-        "success": "Erfolg",
-        "loading": "Laden...",
-        "processing": "Verarbeitung...",
-        "please_wait": "Bitte warten..."
+        "version": "Version %s",
+        "copyright": "© 2025 AtomicArk. Alle Rechte vorbehalten.",
+        "website": "https://github.com/Atomic-Ark/AuTOMIC_MacroTool"
     },
     "menu": {
-        "file": "Datei",
-        "edit": "Bearbeiten",
-        "view": "Ansicht",
-        "tools": "Werkzeuge",
-        "help": "Hilfe",
+        "file": {
+            "title": "Datei",
+            "new_macro": "Neues Makro",
+            "open_macro": "Makro öffnen...",
+            "save_macro": "Makro speichern",
+            "save_as": "Speichern unter...",
+            "import": "Importieren...",
+            "export": "Exportieren...",
+            "settings": "Einstellungen",
+            "exit": "Beenden"
+        },
+        "edit": {
+            "title": "Bearbeiten",
+            "undo": "Rückgängig",
+            "redo": "Wiederholen",
+            "cut": "Ausschneiden",
+            "copy": "Kopieren",
+            "paste": "Einfügen",
+            "delete": "Löschen",
+            "select_all": "Alles auswählen"
+        },
+        "view": {
+            "title": "Ansicht",
+            "toolbar": "Werkzeugleiste",
+            "status_bar": "Statusleiste",
+            "macro_list": "Makroliste",
+            "script_editor": "Skript-Editor"
+        },
+        "macro": {
+            "title": "Makro",
+            "record": "Aufnehmen",
+            "stop": "Stoppen",
+            "play": "Abspielen",
+            "pause": "Pause",
+            "edit": "Bearbeiten",
+            "delete": "Löschen",
+            "properties": "Eigenschaften"
+        },
+        "script": {
+            "title": "Skript",
+            "new": "Neues Skript",
+            "open": "Skript öffnen...",
+            "save": "Skript speichern",
+            "save_as": "Skript speichern unter...",
+            "run": "Skript ausführen",
+            "stop": "Skript stoppen",
+            "check": "Syntax prüfen"
+        },
+        "help": {
+            "title": "Hilfe",
+            "documentation": "Dokumentation",
+            "api_reference": "API-Referenz",
+            "check_updates": "Nach Updates suchen",
+            "about": "Über"
+        }
+    },
+    "toolbar": {
         "new_macro": "Neues Makro",
         "open_macro": "Makro öffnen",
         "save_macro": "Makro speichern",
-        "save_as": "Speichern unter",
-        "import": "Importieren",
-        "export": "Exportieren",
-        "settings": "Einstellungen",
-        "exit": "Beenden"
-    },
-    "toolbar": {
         "record": "Aufnehmen",
-        "stop": "Stopp",
+        "stop": "Stoppen",
         "play": "Abspielen",
         "pause": "Pause",
-        "settings": "Einstellungen",
-        "help": "Hilfe"
+        "settings": "Einstellungen"
     },
-    "macro": {
-        "slot": "Slot",
-        "name": "Name",
-        "type": "Typ",
-        "created": "Erstellt",
-        "modified": "Geändert",
-        "description": "Beschreibung",
-        "author": "Autor",
-        "version": "Version",
-        "tags": "Tags",
-        "recorded": "Aufgezeichnet",
-        "scripted": "Skriptbasiert",
-        "hybrid": "Hybrid",
-        "empty_slot": "Leerer Slot",
+    "status": {
+        "ready": "Bereit",
         "recording": "Aufnahme läuft...",
         "playing": "Wiedergabe läuft...",
         "paused": "Pausiert",
         "stopped": "Gestoppt",
-        "no_macro": "Kein Makro geladen",
-        "delete_confirm": "Sind Sie sicher, dass Sie dieses Makro löschen möchten?",
-        "overwrite_confirm": "Makro existiert bereits. Möchten Sie es überschreiben?"
+        "error": "Fehler: %s",
+        "saved": "Gespeichert",
+        "modified": "Geändert"
     },
-    "settings": {
-        "general": "Allgemein",
-        "recording": "Aufnahme",
-        "playback": "Wiedergabe",
-        "hotkeys": "Tastenkombinationen",
-        "advanced": "Erweitert",
-        "language": "Sprache",
-        "theme": "Design",
-        "ui_scale": "UI-Skalierung",
-        "autostart": "Mit Windows starten",
-        "minimize_tray": "In Taskleiste minimieren",
-        "check_updates": "Nach Updates suchen",
-        "record_mouse": "Maus aufzeichnen",
-        "record_keyboard": "Tastatur aufzeichnen",
-        "record_delays": "Verzögerungen aufzeichnen",
-        "min_delay": "Minimale Verzögerung",
-        "window_mode": "Fenstermodus",
-        "macro_directory": "Makro-Verzeichnis",
-        "playback_mode": "Wiedergabemodus",
-        "repeat_count": "Wiederholungen",
-        "speed": "Geschwindigkeit",
-        "randomize_delays": "Zufällige Verzögerungen",
-        "random_factor": "Zufallsfaktor",
-        "stop_on_input": "Bei Eingabe stoppen",
-        "restore_mouse": "Mausposition wiederherstellen",
-        "stealth_mode": "Tarnmodus",
-        "panic_hotkey": "Panik-Taste",
-        "debug_level": "Debug-Level",
-        "performance_mode": "Leistungsmodus",
-        "reset_settings": "Einstellungen zurücksetzen",
-        "reset_confirm": "Möchten Sie wirklich alle Einstellungen zurücksetzen?"
+    "dialogs": {
+        "macro": {
+            "new": {
+                "title": "Neues Makro",
+                "name": "Name:",
+                "description": "Beschreibung:",
+                "type": "Typ:",
+                "window": "Fenster",
+                "screen": "Bildschirm",
+                "directx": "DirectX"
+            },
+            "properties": {
+                "title": "Makro-Eigenschaften",
+                "name": "Name:",
+                "description": "Beschreibung:",
+                "author": "Autor:",
+                "version": "Version:",
+                "created": "Erstellt:",
+                "modified": "Geändert:",
+                "type": "Typ:",
+                "target": "Zielfenster:",
+                "hotkey": "Tastenkombination:",
+                "slot": "Slot:"
+            },
+            "delete": {
+                "title": "Makro löschen",
+                "confirm": "Möchten Sie dieses Makro wirklich löschen?",
+                "multiple": "Möchten Sie %d Makros wirklich löschen?"
+            },
+            "save": {
+                "title": "Makro speichern",
+                "confirm": "Änderungen am Makro speichern?",
+                "error": "Fehler beim Speichern des Makros"
+            }
+        },
+        "script": {
+            "new": {
+                "title": "Neues Skript",
+                "template": "Vorlage verwenden"
+            },
+            "save": {
+                "title": "Skript speichern",
+                "confirm": "Änderungen am Skript speichern?",
+                "error": "Fehler beim Speichern des Skripts"
+            },
+            "syntax": {
+                "title": "Syntaxfehler",
+                "error": "Syntaxfehler: %s"
+            },
+            "run": {
+                "title": "Skript ausführen",
+                "error": "Fehler beim Ausführen des Skripts: %s"
+            }
+        },
+        "settings": {
+            "title": "Einstellungen",
+            "general": {
+                "title": "Allgemein",
+                "language": "Sprache:",
+                "theme": "Design:",
+                "ui_scale": "UI-Skalierung:",
+                "autostart": "Mit Windows starten",
+                "minimize": "Minimiert starten",
+                "updates": "Nach Updates suchen"
+            },
+            "recording": {
+                "title": "Aufnahme",
+                "mouse": "Maus aufnehmen",
+                "keyboard": "Tastatur aufnehmen",
+                "delays": "Verzögerungen aufnehmen",
+                "min_delay": "Minimale Verzögerung:",
+                "window_mode": "Fenstermodus",
+                "directx_mode": "DirectX-Modus"
+            },
+            "playback": {
+                "title": "Wiedergabe",
+                "repeat": "Wiederholungsmodus:",
+                "count": "Wiederholungen:",
+                "speed": "Geschwindigkeit:",
+                "random": "Zufällige Verzögerungen",
+                "stop": "Bei Eingabe stoppen",
+                "restore": "Mausposition wiederherstellen",
+                "stealth": "Tarnmodus"
+            },
+            "hotkeys": {
+                "title": "Tastenkombinationen",
+                "record": "Aufnahme Start/Stopp",
+                "play": "Wiedergabe Start/Stopp",
+                "pause": "Wiedergabe pausieren",
+                "script": "Skript Start/Stopp",
+                "panic": "Panik-Taste",
+                "show": "Fenster Ein-/Ausblenden"
+            },
+            "advanced": {
+                "title": "Erweitert",
+                "debug": "Debug-Level:",
+                "performance": "Leistungsmodus",
+                "macro_dir": "Makro-Verzeichnis:",
+                "backup_dir": "Backup-Verzeichnis:",
+                "browse": "Durchsuchen..."
+            }
+        },
+        "about": {
+            "title": "Über %s",
+            "version": "Version %s",
+            "copyright": "© 2025 AtomicArk. Alle Rechte vorbehalten.",
+            "description": "Fortgeschrittenes Makro-Aufnahme- und Automatisierungstool",
+            "website": "Website besuchen",
+            "license": "Lizenz",
+            "credits": "Danksagungen",
+            "close": "Schließen"
+        },
+        "error": {
+            "title": "Fehler",
+            "unknown": "Ein unbekannter Fehler ist aufgetreten",
+            "file_not_found": "Datei nicht gefunden",
+            "access_denied": "Zugriff verweigert",
+            "invalid_format": "Ungültiges Dateiformat",
+            "already_exists": "Datei existiert bereits"
+        }
+    },
+    "tray": {
+        "show": "Anzeigen",
+        "hide": "Ausblenden",
+        "record": "Aufnehmen",
+        "stop": "Stoppen",
+        "play": "Abspielen",
+        "pause": "Pause",
+        "exit": "Beenden"
+    },
+    "slots": {
+        "empty": "Leerer Slot",
+        "drag": "Makro hierher ziehen",
+        "clear": "Slot leeren",
+        "assign": "Makro zuweisen"
     },
     "script": {
-        "editor": "Skript-Editor",
-        "check_syntax": "Syntax prüfen",
-        "test_run": "Testlauf",
-        "save_script": "Skript speichern",
-        "syntax_ok": "Syntaxprüfung erfolgreich",
-        "syntax_error": "Syntaxfehler: {0}",
-        "test_success": "Testlauf erfolgreich",
-        "test_error": "Testlauf fehlgeschlagen: {0}",
-        "unsaved_changes": "Es gibt ungespeicherte Änderungen. Möchten Sie diese speichern?"
-    },
-    "updates": {
-        "checking": "Suche nach Updates...",
-        "available": "Update verfügbar",
-        "up_to_date": "Anwendung ist aktuell",
-        "error": "Fehler bei der Update-Prüfung",
-        "download": "Update herunterladen",
-        "installing": "Update wird installiert...",
-        "restart_required": "Neustart erforderlich, um Update abzuschließen"
-    },
-    "errors": {
-        "recording_failed": "Aufnahme konnte nicht gestartet werden",
-        "playback_failed": "Wiedergabe konnte nicht gestartet werden",
-        "save_failed": "Makro konnte nicht gespeichert werden",
-        "load_failed": "Makro konnte nicht geladen werden",
-        "delete_failed": "Makro konnte nicht gelöscht werden",
-        "settings_failed": "Einstellungen konnten nicht gespeichert werden",
-        "driver_failed": "Treiber konnte nicht installiert werden",
-        "permission_denied": "Zugriff verweigert",
-        "file_not_found": "Datei nicht gefunden",
-        "invalid_format": "Ungültiges Dateiformat",
-        "unknown_error": "Ein unbekannter Fehler ist aufgetreten"
-    },
-    "help": {
-        "getting_started": "Erste Schritte",
-        "recording": "Makros aufnehmen",
-        "playback": "Makros abspielen",
-        "scripting": "Makro-Skripte",
-        "settings": "Einstellungshandbuch",
-        "troubleshooting": "Fehlerbehebung",
-        "about": "Über",
-        "support": "Support",
-        "documentation": "Dokumentation",
-        "check_updates": "Nach Updates suchen",
-        "report_bug": "Fehler melden",
-        "feedback": "Feedback senden"
+        "template": "# AuTOMIC MacroTool Skript\n# Erstellt: %s\n\n# Erforderliche Module importieren\nfrom time import sleep\n\n# Ihr Code hier\n",
+        "api": {
+            "key_press": "Tastatureingabe simulieren",
+            "mouse_move": "Mauszeiger bewegen",
+            "mouse_click": "Mausklick simulieren",
+            "mouse_scroll": "Mausrad simulieren",
+            "get_window": "Fensterinformationen abrufen",
+            "find_window": "Fenster nach Titel suchen",
+            "get_active_window": "Aktives Fenster abrufen",
+            "bring_to_front": "Fenster in den Vordergrund bringen",
+            "sleep": "Bestimmte Zeit warten",
+            "log": "Nachricht protokollieren",
+            "debug": "Debug-Nachricht protokollieren",
+            "wait_for_window": "Auf Fenster warten",
+            "repeat": "Aktion mehrmals wiederholen",
+            "wait_until": "Warten bis Bedingung erfüllt ist"
+        }
     }
 }
