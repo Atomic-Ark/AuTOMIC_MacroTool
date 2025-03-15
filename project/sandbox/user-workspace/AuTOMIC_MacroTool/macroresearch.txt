@@ -1,0 +1,89 @@
+Najbardziej oczekiwane funkcje:
+
+Intuicyjny interfejs użytkownika
+
+Łatwy w obsłudze kreator makr dla początkujących
+Możliwość nagrywania akcji myszy i klawiatury w czasie rzeczywistym
+Przejrzysty edytor makr z możliwością łatwej modyfikacji nagranych sekwencji
+Zaawansowane możliwości automatyzacji
+
+Obsługa warunków logicznych (if/else)
+Pętle i powtórzenia (for, while)
+Zmienne i parametry
+Możliwość dodawania opóźnień między akcjami
+Elastyczność uruchamiania makr
+
+Uruchamianie za pomocą skrótów klawiszowych
+Automatyczne uruchamianie o określonej porze
+Uruchamianie w odpowiedzi na zdarzenia systemowe
+Możliwość uruchamiania makr w określonych aplikacjach
+Organizacja i zarządzanie makrami
+
+Możliwość grupowania makr w foldery
+Wyszukiwanie i filtrowanie makr
+Eksport i import makr
+Tworzenie kopii zapasowych
+Kompatybilność i przenośność
+
+Działanie na różnych wersjach Windows
+Możliwość konwersji makr do plików wykonywalnych (.exe)
+Synchronizacja makr między urządzeniami
+Kompatybilność z różnymi aplikacjami
+Bezpieczeństwo i niezawodność
+
+Ochrona przed złośliwym oprogramowaniem
+Regularne aktualizacje i wsparcie
+Stabilność działania
+Opcje odzyskiwania w przypadku awarii
+Dodatkowe funkcje
+
+Rozpoznawanie obrazów i tekstu na ekranie
+Interakcja z bazami danych
+Obsługa skryptów w różnych językach programowania
+Integracja z innymi narzędziami automatyzacji
+
+
+
+Najbardziej problematyczne i nielubiane cechy:
+
+Problemy z bezpieczeństwem
+
+Niektóre programy (np. Pulover's Macro Creator) były zgłaszane jako zawierające złośliwe oprogramowanie
+Brak przejrzystości co do zbieranych danych
+Problemy z fałszywymi alarmami antywirusów
+Ograniczenia w wersjach darmowych
+
+Limity liczby powtórzeń makr
+Brak zaawansowanych funkcji
+Wymuszone reklamy lub znaki wodne
+Ograniczenia czasowe w wersjach trial
+Trudności w obsłudze
+
+Stroma krzywa uczenia się dla zaawansowanych funkcji
+Skomplikowana składnia skryptów
+Nieczytelna dokumentacja
+Brak tutoriali dla początkujących
+Problemy z kompatybilnością
+
+Niedziałanie z niektórymi aplikacjami, szczególnie grami
+Problemy z nowszymi wersjami Windows
+Konflikty z innymi programami
+Ryzyko banów w grach online za używanie makr
+Problemy z niezawodnością
+
+Niestabilność działania, zawieszanie się
+Brak regularnych aktualizacji
+Problemy z odtwarzaniem makr w różnych rozdzielczościach ekranu
+Niedokładne odtwarzanie nagranych akcji
+Ograniczone wsparcie techniczne
+
+Brak aktywnego wsparcia dla darmowych narzędzi
+Długi czas oczekiwania na odpowiedź
+Nieaktualna dokumentacja
+Brak społeczności użytkowników dla mniejszych programów
+Problemy z wydajnością
+
+Wysokie zużycie zasobów systemowych
+Spowolnienie pracy komputera podczas działania makr
+Długi czas uruchamiania programu
+Problemy z działaniem na słabszych komputerach
