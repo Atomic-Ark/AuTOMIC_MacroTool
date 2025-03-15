@@ -1,115 +1,118 @@
 """
 Macro recording module.
+Copyright (c) 2025 AtomicArk
 """
 
 import logging
-import time
 import threading
-from typing import List, Optional, Dict, Callable
+from typing import Dict, List, Optional, Set, Callable
 from enum import Enum, auto
-from dataclasses import dataclass
+import time
+from datetime import datetime
+import win32gui
 import keyboard
 import mouse
 from pynput import keyboard as pynput_keyboard
 from pynput import mouse as pynput_mouse
 
 from ..utils.debug_helper import get_debug_helper
-from .window_manager import window_manager, WindowInfo
-from .input_simulator import InputEvent
+from .window_manager import window_manager
+from .input_simulator import InputType, InputEvent, MouseButton
 
 class RecordingMode(Enum):
     """Recording modes."""
     WINDOW = auto()  # Record relative to window
     SCREEN = auto()  # Record absolute screen coordinates
-    DIRECTX = auto()  # Record DirectX/OpenGL window
+    DIRECTX = auto()  # Record DirectX window input
 
 class RecordingState(Enum):
     """Recording states."""
-    IDLE = auto()
+    STOPPED = auto()
     RECORDING = auto()
     PAUSED = auto()
 
-@dataclass
-class RecordingOptions:
-    """Recording configuration."""
-    mode: RecordingMode = RecordingMode.WINDOW
-    record_mouse: bool = True
-    record_keyboard: bool = True
-    record_delays: bool = True
-    min_delay: float = 0.01
-    target_window: Optional[int] = None
-
 class MacroRecorder:
-    """Records user input for macro creation."""
+    """Records keyboard and mouse input."""
     
-    def __init__(self):
-        self.logger = logging.getLogger('MacroRecorder')
-        self.debug = get_debug_helper()
-        
-        # State
-        self.state = RecordingState.IDLE
-        self.options = RecordingOptions()
-        self.events: List[InputEvent] = []
-        self._start_time: Optional[float] = None
-        self._last_event_time: Optional[float] = None
-        
-        # Threading
-        self._lock = threading.Lock()
-        self._stop_flag = threading.Event()
-        
-        # Callbacks
-        self.on_state_change: Optional[Callable[[RecordingState], None]] = None
-        self.on_event_recorded: Optional[Callable[[InputEvent], None]] = None
-        
-        # Initialize
-        self._init_hooks()
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
 
-    def _init_hooks(self):
-        """Initialize input hooks."""
-        try:
-            # Keyboard hook
+    def __init__(self):
+        if not hasattr(self, '_initialized'):
+            self.logger = logging.getLogger('MacroRecorder')
+            self.debug = get_debug_helper()
+            
+            # State
+            self._state = RecordingState.STOPPED
+            self._mode = RecordingMode.WINDOW
+            self._events: List[InputEvent] = []
+            self._start_time: Optional[float] = None
+            self._last_time: Optional[float] = None
+            self._target_window: Optional[int] = None
+            self._record_mouse = True
+            self._record_keyboard = True
+            self._record_delays = True
+            self._min_delay = 0.01  # Minimum delay in seconds
+            
+            # Input tracking
+            self._pressed_keys: Set[str] = set()
+            self._pressed_buttons: Set[MouseButton] = set()
+            self._last_pos: Optional[tuple[int, int]] = None
+            
+            # Callbacks
+            self._state_callbacks: List[Callable[[RecordingState], None]] = []
+            
+            # Initialize listeners
             self._keyboard_listener = pynput_keyboard.Listener(
                 on_press=self._on_key_press,
                 on_release=self._on_key_release
             )
             
-            # Mouse hook
             self._mouse_listener = pynput_mouse.Listener(
                 on_move=self._on_mouse_move,
                 on_click=self._on_mouse_click,
                 on_scroll=self._on_mouse_scroll
             )
             
-        except Exception as e:
-            self.logger.error(f"Failed to initialize hooks: {e}")
-            raise
+            self._initialized = True
 
-    def start_recording(self, options: Optional[RecordingOptions] = None) -> bool:
-        """Start macro recording."""
+    def start(self, mode: RecordingMode = RecordingMode.WINDOW,
+              target_window: Optional[int] = None) -> bool:
+        """Start recording."""
         try:
-            if self.state != RecordingState.IDLE:
-                return False
-            
             with self._lock:
-                # Update options
-                if options:
-                    self.options = options
+                if self._state != RecordingState.STOPPED:
+                    return False
                 
-                # Clear previous recording
-                self.events.clear()
+                # Reset state
+                self._events.clear()
+                self._pressed_keys.clear()
+                self._pressed_buttons.clear()
+                self._last_pos = None
                 
-                # Start hooks
-                self._keyboard_listener.start()
-                if self.options.record_mouse:
+                # Set mode and target
+                self._mode = mode
+                self._target_window = target_window
+                
+                # Start timing
+                self._start_time = time.time()
+                self._last_time = self._start_time
+                
+                # Start listeners
+                if self._record_keyboard:
+                    self._keyboard_listener.start()
+                if self._record_mouse:
                     self._mouse_listener.start()
                 
-                # Set state
-                self._start_time = time.time()
-                self._last_event_time = self._start_time
-                self.state = RecordingState.RECORDING
-                
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+                # Update state
+                self._state = RecordingState.RECORDING
+                self._notify_state_change()
                 
                 return True
             
@@ -117,24 +120,26 @@ class MacroRecorder:
             self.logger.error(f"Failed to start recording: {e}")
             return False
 
-    def stop_recording(self) -> bool:
-        """Stop macro recording."""
+    def stop(self) -> bool:
+        """Stop recording."""
         try:
-            if self.state == RecordingState.IDLE:
-                return False
-            
             with self._lock:
-                # Stop hooks
-                self._keyboard_listener.stop()
-                self._mouse_listener.stop()
+                if self._state == RecordingState.STOPPED:
+                    return False
                 
-                # Reset state
-                self.state = RecordingState.IDLE
-                self._start_time = None
-                self._last_event_time = None
+                # Stop listeners
+                if self._keyboard_listener.running:
+                    self._keyboard_listener.stop()
+                if self._mouse_listener.running:
+                    self._mouse_listener.stop()
                 
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+                # Release tracking
+                self._pressed_keys.clear()
+                self._pressed_buttons.clear()
+                
+                # Update state
+                self._state = RecordingState.STOPPED
+                self._notify_state_change()
                 
                 return True
             
@@ -142,17 +147,22 @@ class MacroRecorder:
             self.logger.error(f"Failed to stop recording: {e}")
             return False
 
-    def pause_recording(self) -> bool:
-        """Pause macro recording."""
+    def pause(self) -> bool:
+        """Pause recording."""
         try:
-            if self.state != RecordingState.RECORDING:
-                return False
-            
             with self._lock:
-                self.state = RecordingState.PAUSED
+                if self._state != RecordingState.RECORDING:
+                    return False
                 
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+                # Stop listeners
+                if self._keyboard_listener.running:
+                    self._keyboard_listener.stop()
+                if self._mouse_listener.running:
+                    self._mouse_listener.stop()
+                
+                # Update state
+                self._state = RecordingState.PAUSED
+                self._notify_state_change()
                 
                 return True
             
@@ -160,18 +170,28 @@ class MacroRecorder:
             self.logger.error(f"Failed to pause recording: {e}")
             return False
 
-    def resume_recording(self) -> bool:
-        """Resume macro recording."""
+    def resume(self) -> bool:
+        """Resume recording."""
         try:
-            if self.state != RecordingState.PAUSED:
-                return False
-            
             with self._lock:
-                self.state = RecordingState.RECORDING
-                self._last_event_time = time.time()
+                if self._state != RecordingState.PAUSED:
+                    return False
                 
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+                # Update timing
+                current_time = time.time()
+                if self._last_time:
+                    self._start_time += (current_time - self._last_time)
+                self._last_time = current_time
+                
+                # Start listeners
+                if self._record_keyboard:
+                    self._keyboard_listener.start()
+                if self._record_mouse:
+                    self._mouse_listener.start()
+                
+                # Update state
+                self._state = RecordingState.RECORDING
+                self._notify_state_change()
                 
                 return True
             
@@ -179,211 +199,247 @@ class MacroRecorder:
             self.logger.error(f"Failed to resume recording: {e}")
             return False
 
-    def _record_event(self, event: InputEvent):
-        """Record input event."""
+    def _on_key_press(self, key) -> None:
+        """Handle key press event."""
         try:
-            if self.state != RecordingState.RECORDING:
+            if self._state != RecordingState.RECORDING:
                 return
             
-            with self._lock:
-                # Add delay if enabled
-                current_time = time.time()
-                if self.options.record_delays and self._last_event_time:
-                    delay = current_time - self._last_event_time
-                    if delay >= self.options.min_delay:
-                        delay_event = InputEvent(
-                            type='delay',
-                            action='wait',
-                            data={'duration': delay},
-                            timestamp=current_time
-                        )
-                        self.events.append(delay_event)
-                
-                # Add window info if targeting window
-                if self.options.mode == RecordingMode.WINDOW:
-                    if self.options.target_window:
-                        window = window_manager.get_window_info(
-                            self.options.target_window
-                        )
-                    else:
-                        window = window_manager.get_active_window()
+            # Convert key to string
+            try:
+                key_str = key.char
+            except AttributeError:
+                key_str = str(key).replace('Key.', '')
+            
+            # Skip if already pressed
+            if key_str in self._pressed_keys:
+                return
+            
+            # Add event
+            self._add_event(InputType.KEYBOARD, {
+                'key': key_str,
+                'action': 'press'
+            })
+            
+            # Update tracking
+            self._pressed_keys.add(key_str)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to handle key press: {e}")
+
+    def _on_key_release(self, key) -> None:
+        """Handle key release event."""
+        try:
+            if self._state != RecordingState.RECORDING:
+                return
+            
+            # Convert key to string
+            try:
+                key_str = key.char
+            except AttributeError:
+                key_str = str(key).replace('Key.', '')
+            
+            # Skip if not pressed
+            if key_str not in self._pressed_keys:
+                return
+            
+            # Add event
+            self._add_event(InputType.KEYBOARD, {
+                'key': key_str,
+                'action': 'release'
+            })
+            
+            # Update tracking
+            self._pressed_keys.remove(key_str)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to handle key release: {e}")
+
+    def _on_mouse_move(self, x: int, y: int) -> None:
+        """Handle mouse move event."""
+        try:
+            if self._state != RecordingState.RECORDING:
+                return
+            
+            # Skip if position unchanged
+            if self._last_pos == (x, y):
+                return
+            
+            # Convert coordinates
+            if self._mode == RecordingMode.WINDOW and self._target_window:
+                # Get window position
+                window_rect = win32gui.GetWindowRect(self._target_window)
+                if window_rect:
+                    # Calculate relative position
+                    rel_x = x - window_rect[0]
+                    rel_y = y - window_rect[1]
                     
-                    if window:
-                        event.window_info = {
-                            'hwnd': window.hwnd,
-                            'title': window.title,
-                            'rect': window.rect
-                        }
-                
-                # Record event
-                self.events.append(event)
-                self._last_event_time = current_time
-                
-                # Notify callback
-                if self.on_event_recorded:
-                    self.on_event_recorded(event)
-            
-        except Exception as e:
-            self.logger.error(f"Failed to record event: {e}")
-
-    def _on_key_press(self, key):
-        """Handle key press events."""
-        try:
-            if not self.options.record_keyboard:
-                return
-            
-            # Convert key to string
-            key_str = None
-            if hasattr(key, 'char'):
-                key_str = key.char
-            elif hasattr(key, 'name'):
-                key_str = key.name
+                    # Add event
+                    self._add_event(InputType.MOUSE_MOVE, {
+                        'x': x,
+                        'y': y,
+                        'relative_x': rel_x,
+                        'relative_y': rel_y
+                    })
             else:
-                key_str = str(key)
-            
-            event = InputEvent(
-                type='keyboard',
-                action='press',
-                data={'key': key_str},
-                timestamp=time.time()
-            )
-            
-            self._record_event(event)
-            
-        except Exception as e:
-            self.logger.error(f"Error in key press handler: {e}")
-
-    def _on_key_release(self, key):
-        """Handle key release events."""
-        try:
-            if not self.options.record_keyboard:
-                return
-            
-            # Convert key to string
-            key_str = None
-            if hasattr(key, 'char'):
-                key_str = key.char
-            elif hasattr(key, 'name'):
-                key_str = key.name
-            else:
-                key_str = str(key)
-            
-            event = InputEvent(
-                type='keyboard',
-                action='release',
-                data={'key': key_str},
-                timestamp=time.time()
-            )
-            
-            self._record_event(event)
-            
-        except Exception as e:
-            self.logger.error(f"Error in key release handler: {e}")
-
-    def _on_mouse_move(self, x, y):
-        """Handle mouse move events."""
-        try:
-            if not self.options.record_mouse:
-                return
-            
-            # Convert coordinates if needed
-            if (self.options.mode == RecordingMode.WINDOW and 
-                self.options.target_window):
-                pos = window_manager.get_relative_pos(
-                    self.options.target_window,
-                    x,
-                    y
-                )
-                if pos:
-                    x, y = pos
-            
-            event = InputEvent(
-                type='mouse',
-                action='move',
-                data={'x': x, 'y': y},
-                timestamp=time.time()
-            )
-            
-            self._record_event(event)
-            
-        except Exception as e:
-            self.logger.error(f"Error in mouse move handler: {e}")
-
-    def _on_mouse_click(self, x, y, button, pressed):
-        """Handle mouse click events."""
-        try:
-            if not self.options.record_mouse:
-                return
-            
-            # Convert coordinates if needed
-            if (self.options.mode == RecordingMode.WINDOW and 
-                self.options.target_window):
-                pos = window_manager.get_relative_pos(
-                    self.options.target_window,
-                    x,
-                    y
-                )
-                if pos:
-                    x, y = pos
-            
-            event = InputEvent(
-                type='mouse',
-                action='press' if pressed else 'release',
-                data={
-                    'button': button.name,
+                # Add absolute position
+                self._add_event(InputType.MOUSE_MOVE, {
                     'x': x,
                     'y': y
-                },
-                timestamp=time.time()
-            )
+                })
             
-            self._record_event(event)
+            # Update tracking
+            self._last_pos = (x, y)
             
         except Exception as e:
-            self.logger.error(f"Error in mouse click handler: {e}")
+            self.logger.error(f"Failed to handle mouse move: {e}")
 
-    def _on_mouse_scroll(self, x, y, dx, dy):
-        """Handle mouse scroll events."""
+    def _on_mouse_click(self, x: int, y: int, button, pressed: bool) -> None:
+        """Handle mouse click event."""
         try:
-            if not self.options.record_mouse:
+            if self._state != RecordingState.RECORDING:
                 return
             
-            event = InputEvent(
-                type='mouse',
-                action='scroll',
-                data={'dx': dx, 'dy': dy},
-                timestamp=time.time()
-            )
+            # Convert button
+            button_map = {
+                pynput_mouse.Button.left: MouseButton.LEFT,
+                pynput_mouse.Button.right: MouseButton.RIGHT,
+                pynput_mouse.Button.middle: MouseButton.MIDDLE
+            }
+            mouse_button = button_map.get(button)
+            if not mouse_button:
+                return
             
-            self._record_event(event)
+            # Skip if state unchanged
+            if pressed and mouse_button in self._pressed_buttons:
+                return
+            if not pressed and mouse_button not in self._pressed_buttons:
+                return
+            
+            # Add event
+            self._add_event(InputType.MOUSE_CLICK, {
+                'button': mouse_button.name,
+                'action': 'press' if pressed else 'release',
+                'x': x,
+                'y': y
+            })
+            
+            # Update tracking
+            if pressed:
+                self._pressed_buttons.add(mouse_button)
+            else:
+                self._pressed_buttons.remove(mouse_button)
             
         except Exception as e:
-            self.logger.error(f"Error in mouse scroll handler: {e}")
+            self.logger.error(f"Failed to handle mouse click: {e}")
+
+    def _on_mouse_scroll(self, x: int, y: int, dx: int, dy: int) -> None:
+        """Handle mouse scroll event."""
+        try:
+            if self._state != RecordingState.RECORDING:
+                return
+            
+            # Add event
+            self._add_event(InputType.MOUSE_SCROLL, {
+                'x': x,
+                'y': y,
+                'dx': dx,
+                'dy': dy
+            })
+            
+        except Exception as e:
+            self.logger.error(f"Failed to handle mouse scroll: {e}")
+
+    def _add_event(self, event_type: InputType, data: Dict) -> None:
+        """Add input event."""
+        try:
+            # Get timing
+            current_time = time.time()
+            timestamp = current_time - self._start_time
+            
+            # Skip if delay too small
+            if self._last_time and self._record_delays:
+                delay = current_time - self._last_time
+                if delay < self._min_delay:
+                    return
+            
+            # Get window info
+            window_handle = None
+            window_title = None
+            if self._mode == RecordingMode.WINDOW:
+                if self._target_window:
+                    window_handle = self._target_window
+                    window_title = win32gui.GetWindowText(window_handle)
+                else:
+                    window_handle = win32gui.GetForegroundWindow()
+                    window_title = win32gui.GetWindowText(window_handle)
+            
+            # Create event
+            event = InputEvent(
+                type=event_type,
+                timestamp=timestamp,
+                data=data,
+                window_handle=window_handle,
+                window_title=window_title
+            )
+            
+            # Add event
+            with self._lock:
+                self._events.append(event)
+                self._last_time = current_time
+            
+        except Exception as e:
+            self.logger.error(f"Failed to add event: {e}")
 
     def get_events(self) -> List[InputEvent]:
         """Get recorded events."""
         with self._lock:
-            return list(self.events)
+            return self._events.copy()
 
-    def clear_events(self):
-        """Clear recorded events."""
+    def get_state(self) -> RecordingState:
+        """Get current state."""
+        return self._state
+
+    def get_mode(self) -> RecordingMode:
+        """Get current mode."""
+        return self._mode
+
+    def set_options(self, record_mouse: bool = True,
+                   record_keyboard: bool = True,
+                   record_delays: bool = True,
+                   min_delay: float = 0.01) -> None:
+        """Set recording options."""
         with self._lock:
-            self.events.clear()
+            self._record_mouse = record_mouse
+            self._record_keyboard = record_keyboard
+            self._record_delays = record_delays
+            self._min_delay = min_delay
+
+    def add_state_callback(self, callback: Callable[[RecordingState], None]) -> None:
+        """Add state change callback."""
+        with self._lock:
+            self._state_callbacks.append(callback)
+
+    def remove_state_callback(self, callback: Callable[[RecordingState], None]) -> None:
+        """Remove state change callback."""
+        with self._lock:
+            self._state_callbacks.remove(callback)
+
+    def _notify_state_change(self) -> None:
+        """Notify state change callbacks."""
+        for callback in self._state_callbacks:
+            try:
+                callback(self._state)
+            except Exception as e:
+                self.logger.error(f"Callback error: {e}")
 
     def cleanup(self):
         """Clean up resources."""
         try:
-            self._stop_flag.set()
-            
-            # Stop recording if active
-            if self.state != RecordingState.IDLE:
-                self.stop_recording()
-            
-            # Stop listeners
-            if hasattr(self, '_keyboard_listener'):
-                self._keyboard_listener.stop()
-            if hasattr(self, '_mouse_listener'):
-                self._mouse_listener.stop()
+            self.stop()
+            with self._lock:
+                self._events.clear()
+                self._state_callbacks.clear()
             
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")

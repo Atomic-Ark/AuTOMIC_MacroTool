@@ -1,142 +1,122 @@
 """
 Macro playback module.
+Copyright (c) 2025 AtomicArk
 """
 
 import logging
-import time
 import threading
-import random
-from typing import List, Optional, Dict, Callable
+from typing import List, Optional, Callable
 from enum import Enum, auto
-from dataclasses import dataclass
+import time
+import random
+import keyboard
+import mouse
+import win32gui
 
 from ..utils.debug_helper import get_debug_helper
-from .window_manager import window_manager, WindowInfo
-from .input_simulator import input_simulator, InputMode, InputEvent
+from .window_manager import window_manager
+from .input_simulator import input_simulator, InputType, InputEvent, MouseButton
 from .recorder import RecordingMode
 
 class PlaybackMode(Enum):
     """Playback modes."""
-    ONCE = auto()
-    LOOP = auto()
-    COUNT = auto()
+    ONCE = auto()      # Play once
+    LOOP = auto()      # Loop indefinitely
+    COUNT = auto()     # Play specific number of times
 
 class PlaybackState(Enum):
     """Playback states."""
-    IDLE = auto()
+    STOPPED = auto()
     PLAYING = auto()
     PAUSED = auto()
-
-@dataclass
-class PlaybackOptions:
-    """Playback configuration."""
-    mode: PlaybackMode = PlaybackMode.ONCE
-    repeat_count: int = 1
-    speed: float = 1.0
-    randomize_delays: bool = False
-    random_factor: float = 0.2
-    stop_on_input: bool = True
-    restore_mouse: bool = True
-    stealth_mode: bool = False
 
 class MacroPlayer:
     """Plays back recorded macros."""
     
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
+
     def __init__(self):
-        self.logger = logging.getLogger('MacroPlayer')
-        self.debug = get_debug_helper()
-        
-        # State
-        self.state = PlaybackState.IDLE
-        self.options = PlaybackOptions()
-        self._events: List[InputEvent] = []
-        self._current_index = 0
-        self._repeat_count = 0
-        self._original_mouse_pos = (0, 0)
-        
-        # Threading
-        self._playback_thread: Optional[threading.Thread] = None
-        self._lock = threading.Lock()
-        self._stop_flag = threading.Event()
-        self._pause_flag = threading.Event()
-        
-        # Callbacks
-        self.on_state_change: Optional[Callable[[PlaybackState], None]] = None
-        self.on_event_played: Optional[Callable[[InputEvent], None]] = None
-        self.on_playback_complete: Optional[Callable[[], None]] = None
-        
-        # Input monitoring
-        self._init_input_monitoring()
+        if not hasattr(self, '_initialized'):
+            self.logger = logging.getLogger('MacroPlayer')
+            self.debug = get_debug_helper()
+            
+            # State
+            self._state = PlaybackState.STOPPED
+            self._mode = PlaybackMode.ONCE
+            self._events: List[InputEvent] = []
+            self._current_index = 0
+            self._repeat_count = 1
+            self._current_repeat = 0
+            self._start_time: Optional[float] = None
+            self._pause_time: Optional[float] = None
+            self._speed_multiplier = 1.0
+            self._randomize_delays = False
+            self._stop_on_input = True
+            self._restore_position = True
+            self._original_position: Optional[tuple[int, int]] = None
+            
+            # Playback thread
+            self._playback_thread: Optional[threading.Thread] = None
+            self._stop_event = threading.Event()
+            
+            # Callbacks
+            self._state_callbacks: List[Callable[[PlaybackState], None]] = []
+            self._progress_callbacks: List[Callable[[float], None]] = []
+            
+            # Input monitoring
+            self._monitor_thread: Optional[threading.Thread] = None
+            self._last_input_time = 0
+            
+            self._initialized = True
 
-    def _init_input_monitoring(self):
-        """Initialize input monitoring for stop conditions."""
+    def play(self, events: List[InputEvent], mode: PlaybackMode = PlaybackMode.ONCE,
+             repeat_count: int = 1) -> bool:
+        """Start playback."""
         try:
-            import keyboard
-            import mouse
-            
-            # Monitor keyboard
-            keyboard.hook(self._check_input)
-            
-            # Monitor mouse
-            mouse.hook(self._check_input)
-            
-        except Exception as e:
-            self.logger.error(f"Failed to initialize input monitoring: {e}")
-
-    def _check_input(self, event):
-        """Check for user input to stop playback."""
-        try:
-            if (self.state == PlaybackState.PLAYING and 
-                self.options.stop_on_input):
-                self.stop_playback()
-            
-        except Exception as e:
-            self.logger.error(f"Error checking input: {e}")
-
-    def start_playback(self, events: List[InputEvent],
-                      options: Optional[PlaybackOptions] = None) -> bool:
-        """Start macro playback."""
-        try:
-            if self.state != PlaybackState.IDLE:
-                return False
-            
             with self._lock:
-                # Update options
-                if options:
-                    self.options = options
-                
-                # Store events
-                self._events = list(events)
-                if not self._events:
+                if self._state != PlaybackState.STOPPED:
                     return False
                 
-                # Reset state
+                # Validate input
+                if not events:
+                    return False
+                if mode == PlaybackMode.COUNT and repeat_count < 1:
+                    return False
+                
+                # Store original cursor position
+                if self._restore_position:
+                    self._original_position = input_simulator.get_cursor_pos()
+                
+                # Set up playback
+                self._events = events
+                self._mode = mode
+                self._repeat_count = repeat_count
+                self._current_repeat = 0
                 self._current_index = 0
-                self._repeat_count = 0
-                self._stop_flag.clear()
-                self._pause_flag.clear()
+                self._start_time = time.time()
+                self._stop_event.clear()
                 
-                # Store mouse position
-                if self.options.restore_mouse:
-                    self._original_mouse_pos = win32api.GetCursorPos()
-                
-                # Set stealth mode
-                if self.options.stealth_mode:
-                    input_simulator.set_mode(InputMode.STEALTH)
-                else:
-                    input_simulator.set_mode(InputMode.NORMAL)
+                # Start monitoring if needed
+                if self._stop_on_input:
+                    self._start_input_monitoring()
                 
                 # Start playback thread
                 self._playback_thread = threading.Thread(
                     target=self._playback_loop,
-                    daemon=True
+                    name="MacroPlayback"
                 )
                 self._playback_thread.start()
                 
                 # Update state
-                self.state = PlaybackState.PLAYING
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+                self._state = PlaybackState.PLAYING
+                self._notify_state_change()
                 
                 return True
             
@@ -144,29 +124,30 @@ class MacroPlayer:
             self.logger.error(f"Failed to start playback: {e}")
             return False
 
-    def stop_playback(self) -> bool:
-        """Stop macro playback."""
+    def stop(self) -> bool:
+        """Stop playback."""
         try:
-            if self.state == PlaybackState.IDLE:
-                return False
-            
             with self._lock:
+                if self._state == PlaybackState.STOPPED:
+                    return False
+                
                 # Signal stop
-                self._stop_flag.set()
-                self._pause_flag.clear()
+                self._stop_event.set()
                 
                 # Wait for thread
-                if self._playback_thread:
-                    self._playback_thread.join(timeout=1.0)
+                if self._playback_thread and self._playback_thread.is_alive():
+                    self._playback_thread.join()
                 
-                # Restore mouse position
-                if self.options.restore_mouse:
-                    win32api.SetCursorPos(self._original_mouse_pos)
+                # Stop monitoring
+                self._stop_input_monitoring()
+                
+                # Restore position
+                if self._restore_position and self._original_position:
+                    input_simulator.mouse_move(*self._original_position)
                 
                 # Reset state
-                self.state = PlaybackState.IDLE
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+                self._state = PlaybackState.STOPPED
+                self._notify_state_change()
                 
                 return True
             
@@ -174,18 +155,19 @@ class MacroPlayer:
             self.logger.error(f"Failed to stop playback: {e}")
             return False
 
-    def pause_playback(self) -> bool:
-        """Pause macro playback."""
+    def pause(self) -> bool:
+        """Pause playback."""
         try:
-            if self.state != PlaybackState.PLAYING:
-                return False
-            
             with self._lock:
-                self._pause_flag.set()
-                self.state = PlaybackState.PAUSED
+                if self._state != PlaybackState.PLAYING:
+                    return False
                 
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+                # Store pause time
+                self._pause_time = time.time()
+                
+                # Update state
+                self._state = PlaybackState.PAUSED
+                self._notify_state_change()
                 
                 return True
             
@@ -193,18 +175,21 @@ class MacroPlayer:
             self.logger.error(f"Failed to pause playback: {e}")
             return False
 
-    def resume_playback(self) -> bool:
-        """Resume macro playback."""
+    def resume(self) -> bool:
+        """Resume playback."""
         try:
-            if self.state != PlaybackState.PAUSED:
-                return False
-            
             with self._lock:
-                self._pause_flag.clear()
-                self.state = PlaybackState.PLAYING
+                if self._state != PlaybackState.PAUSED:
+                    return False
                 
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+                # Adjust start time
+                if self._pause_time and self._start_time:
+                    pause_duration = time.time() - self._pause_time
+                    self._start_time += pause_duration
+                
+                # Update state
+                self._state = PlaybackState.PLAYING
+                self._notify_state_change()
                 
                 return True
             
@@ -212,129 +197,227 @@ class MacroPlayer:
             self.logger.error(f"Failed to resume playback: {e}")
             return False
 
-    def _playback_loop(self):
+    def _playback_loop(self) -> None:
         """Main playback loop."""
         try:
-            while not self._stop_flag.is_set():
-                # Check completion
+            while not self._stop_event.is_set():
+                # Check if we should stop
+                if self._should_stop():
+                    break
+                
+                # Get current event
+                event = self._events[self._current_index]
+                
+                # Wait for correct timing
+                self._wait_for_timing(event.timestamp)
+                
+                # Process event
+                if self._state == PlaybackState.PLAYING:
+                    self._process_event(event)
+                
+                # Update progress
+                self._notify_progress()
+                
+                # Move to next event
+                self._current_index += 1
+                
+                # Check if we reached the end
                 if self._current_index >= len(self._events):
-                    if self.options.mode == PlaybackMode.ONCE:
+                    if self._mode == PlaybackMode.ONCE:
                         break
-                    elif self.options.mode == PlaybackMode.COUNT:
-                        self._repeat_count += 1
-                        if self._repeat_count >= self.options.repeat_count:
+                    elif self._mode == PlaybackMode.COUNT:
+                        self._current_repeat += 1
+                        if self._current_repeat >= self._repeat_count:
                             break
                     
                     # Reset for next iteration
                     self._current_index = 0
-                
-                # Check pause
-                if self._pause_flag.is_set():
-                    time.sleep(0.1)
-                    continue
-                
-                # Play current event
-                event = self._events[self._current_index]
-                self._play_event(event)
-                
-                # Move to next event
-                self._current_index += 1
+                    self._start_time = time.time()
             
-            # Playback complete
-            if self.on_playback_complete:
-                self.on_playback_complete()
-            
-            # Reset state
-            with self._lock:
-                self.state = PlaybackState.IDLE
-                if self.on_state_change:
-                    self.on_state_change(self.state)
+            # Clean up
+            self.stop()
             
         except Exception as e:
-            self.logger.error(f"Error in playback loop: {e}")
-            self.stop_playback()
+            self.logger.error(f"Playback error: {e}")
+            self.stop()
 
-    def _play_event(self, event: InputEvent):
-        """Play single event."""
+    def _should_stop(self) -> bool:
+        """Check if playback should stop."""
+        # Check stop event
+        if self._stop_event.is_set():
+            return True
+        
+        # Check input if enabled
+        if self._stop_on_input:
+            current_time = time.time()
+            if current_time - self._last_input_time < 0.1:  # 100ms threshold
+                return True
+        
+        return False
+
+    def _wait_for_timing(self, target_time: float) -> None:
+        """Wait for correct event timing."""
+        if self._state != PlaybackState.PLAYING:
+            return
+        
+        current_time = time.time()
+        elapsed = current_time - self._start_time
+        wait_time = (target_time / self._speed_multiplier) - elapsed
+        
+        if wait_time > 0:
+            if self._randomize_delays:
+                # Add random variation (±20%)
+                variation = wait_time * 0.2
+                wait_time += random.uniform(-variation, variation)
+                wait_time = max(0, wait_time)
+            
+            time.sleep(wait_time)
+
+    def _process_event(self, event: InputEvent) -> None:
+        """Process input event."""
         try:
-            # Handle delay events
-            if event.type == 'delay':
-                delay = event.data['duration']
+            # Handle window-relative events
+            if event.window_handle and event.window_title:
+                # Find window
+                window = window_manager.find_window(title=event.window_title)
+                if not window:
+                    self.logger.warning(f"Target window not found: {event.window_title}")
+                    return
                 
-                # Apply speed factor
-                delay /= self.options.speed
+                # Bring to front
+                window_manager.bring_to_front(window.handle)
+            
+            # Process by type
+            if event.type == InputType.KEYBOARD:
+                if event.data['action'] == 'press':
+                    input_simulator.key_down(event.data['key'])
+                else:
+                    input_simulator.key_up(event.data['key'])
                 
-                # Apply randomization
-                if self.options.randomize_delays:
-                    factor = 1.0 + (random.random() * 2 - 1) * self.options.random_factor
-                    delay *= factor
+            elif event.type == InputType.MOUSE_MOVE:
+                x = event.data['x']
+                y = event.data['y']
                 
-                time.sleep(max(0, delay))
+                # Handle relative coordinates
+                if 'relative_x' in event.data and event.window_handle:
+                    window_rect = win32gui.GetWindowRect(event.window_handle)
+                    x = window_rect[0] + event.data['relative_x']
+                    y = window_rect[1] + event.data['relative_y']
+                
+                input_simulator.mouse_move(x, y)
+                
+            elif event.type == InputType.MOUSE_CLICK:
+                button = MouseButton[event.data['button']]
+                if event.data['action'] == 'press':
+                    input_simulator.mouse_click(button)
+                
+            elif event.type == InputType.MOUSE_SCROLL:
+                input_simulator.mouse_scroll(event.data['dy'])
+            
+        except Exception as e:
+            self.logger.error(f"Failed to process event: {e}")
+
+    def _start_input_monitoring(self) -> None:
+        """Start input monitoring."""
+        try:
+            if self._monitor_thread and self._monitor_thread.is_alive():
                 return
             
-            # Handle window context
-            if event.window_info:
-                window = window_manager.get_window_info(event.window_info['hwnd'])
-                if not window:
-                    # Try finding window by title
-                    window = window_manager.get_window_by_title(
-                        event.window_info['title']
-                    )
-                
-                if window:
-                    # Convert coordinates if needed
-                    if event.type == 'mouse':
-                        if 'x' in event.data and 'y' in event.data:
-                            pos = window_manager.get_absolute_pos(
-                                window.hwnd,
-                                event.data['x'],
-                                event.data['y']
-                            )
-                            if pos:
-                                event.data['x'], event.data['y'] = pos
-            
-            # Play event
-            if event.type == 'keyboard':
-                if event.action == 'press':
-                    input_simulator.simulate_key(event.data['key'], True)
-                elif event.action == 'release':
-                    input_simulator.simulate_key(event.data['key'], False)
-                
-            elif event.type == 'mouse':
-                if event.action == 'move':
-                    input_simulator.simulate_mouse_move(
-                        event.data['x'],
-                        event.data['y']
-                    )
-                elif event.action in ['press', 'release']:
-                    input_simulator.simulate_mouse_button(
-                        event.data['button'],
-                        event.action == 'press'
-                    )
-                elif event.action == 'scroll':
-                    input_simulator.simulate_mouse_scroll(
-                        event.data['dy']
-                    )
-            
-            # Notify callback
-            if self.on_event_played:
-                self.on_event_played(event)
+            self._monitor_thread = threading.Thread(
+                target=self._monitor_input,
+                name="InputMonitor"
+            )
+            self._monitor_thread.daemon = True
+            self._monitor_thread.start()
             
         except Exception as e:
-            self.logger.error(f"Error playing event: {e}")
+            self.logger.error(f"Failed to start input monitoring: {e}")
+
+    def _stop_input_monitoring(self) -> None:
+        """Stop input monitoring."""
+        try:
+            if self._monitor_thread:
+                self._monitor_thread = None
+            
+        except Exception as e:
+            self.logger.error(f"Failed to stop input monitoring: {e}")
+
+    def _monitor_input(self) -> None:
+        """Monitor for user input."""
+        try:
+            while self._monitor_thread:
+                if keyboard.is_pressed() or mouse.is_pressed():
+                    self._last_input_time = time.time()
+                time.sleep(0.01)  # 10ms polling
+            
+        except Exception as e:
+            self.logger.error(f"Input monitoring error: {e}")
+
+    def set_options(self, speed: float = 1.0,
+                   randomize_delays: bool = False,
+                   stop_on_input: bool = True,
+                   restore_position: bool = True) -> None:
+        """Set playback options."""
+        with self._lock:
+            self._speed_multiplier = max(0.1, min(10.0, speed))
+            self._randomize_delays = randomize_delays
+            self._stop_on_input = stop_on_input
+            self._restore_position = restore_position
+
+    def get_state(self) -> PlaybackState:
+        """Get current state."""
+        return self._state
+
+    def get_progress(self) -> float:
+        """Get playback progress (0-1)."""
+        if not self._events:
+            return 0.0
+        return self._current_index / len(self._events)
+
+    def add_state_callback(self, callback: Callable[[PlaybackState], None]) -> None:
+        """Add state change callback."""
+        with self._lock:
+            self._state_callbacks.append(callback)
+
+    def remove_state_callback(self, callback: Callable[[PlaybackState], None]) -> None:
+        """Remove state change callback."""
+        with self._lock:
+            self._state_callbacks.remove(callback)
+
+    def add_progress_callback(self, callback: Callable[[float], None]) -> None:
+        """Add progress callback."""
+        with self._lock:
+            self._progress_callbacks.append(callback)
+
+    def remove_progress_callback(self, callback: Callable[[float], None]) -> None:
+        """Remove progress callback."""
+        with self._lock:
+            self._progress_callbacks.remove(callback)
+
+    def _notify_state_change(self) -> None:
+        """Notify state change callbacks."""
+        for callback in self._state_callbacks:
+            try:
+                callback(self._state)
+            except Exception as e:
+                self.logger.error(f"Callback error: {e}")
+
+    def _notify_progress(self) -> None:
+        """Notify progress callbacks."""
+        progress = self.get_progress()
+        for callback in self._progress_callbacks:
+            try:
+                callback(progress)
+            except Exception as e:
+                self.logger.error(f"Callback error: {e}")
 
     def cleanup(self):
         """Clean up resources."""
         try:
-            # Stop playback if active
-            if self.state != PlaybackState.IDLE:
-                self.stop_playback()
-            
-            # Remove input hooks
-            import keyboard
-            import mouse
-            keyboard.unhook_all()
-            mouse.unhook_all()
+            self.stop()
+            with self._lock:
+                self._state_callbacks.clear()
+                self._progress_callbacks.clear()
             
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
