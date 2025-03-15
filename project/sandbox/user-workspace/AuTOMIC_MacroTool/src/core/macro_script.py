@@ -1,297 +1,329 @@
 """
-Macro scripting module for advanced automation.
+Macro scripting module.
+Copyright (c) 2025 AtomicArk
 """
 
 import logging
-import time
 import threading
-import inspect
 from typing import Dict, List, Optional, Any, Callable
-from enum import Enum, auto
+import time
 import ast
-import sys
+import inspect
 from pathlib import Path
+import traceback
 
 from ..utils.debug_helper import get_debug_helper
-from .window_manager import window_manager, WindowInfo
-from .input_simulator import input_simulator, InputMode, InputEvent
+from .window_manager import window_manager
+from .input_simulator import input_simulator, MouseButton
 from .recorder import RecordingMode
 
-class ScriptState(Enum):
-    """Script execution states."""
-    IDLE = auto()
-    RUNNING = auto()
-    PAUSED = auto()
-    ERROR = auto()
-
-class ScriptContext:
-    """Execution context for macro scripts."""
+class ScriptAPI:
+    """API for macro scripts."""
     
     def __init__(self):
-        self.logger = logging.getLogger('ScriptContext')
-        self.debug = get_debug_helper()
-        
-        # State
-        self.state = ScriptState.IDLE
-        self._stop_flag = threading.Event()
-        self._pause_flag = threading.Event()
-        
-        # Script variables
-        self.variables: Dict[str, Any] = {}
-        self.functions: Dict[str, Callable] = {}
+        self.logger = logging.getLogger('ScriptAPI')
+        self._locals: Dict[str, Any] = {}
+        self._globals: Dict[str, Any] = {}
+        self._stop_flag = False
         
         # Initialize API
         self._init_api()
 
     def _init_api(self):
-        """Initialize script API functions."""
+        """Initialize API functions."""
         # Input functions
-        self.key_press = input_simulator.simulate_key
-        self.mouse_move = input_simulator.simulate_mouse_move
-        self.mouse_click = input_simulator.simulate_mouse_button
-        self.mouse_scroll = input_simulator.simulate_mouse_scroll
+        self._globals['key_press'] = self.key_press
+        self._globals['key_down'] = self.key_down
+        self._globals['key_up'] = self.key_up
+        self._globals['mouse_move'] = self.mouse_move
+        self._globals['mouse_click'] = self.mouse_click
+        self._globals['mouse_scroll'] = self.mouse_scroll
         
         # Window functions
-        self.get_window = window_manager.get_window_info
-        self.find_window = window_manager.get_window_by_title
-        self.get_active_window = window_manager.get_active_window
-        self.bring_to_front = window_manager.bring_window_to_front
+        self._globals['get_window'] = self.get_window
+        self._globals['find_window'] = self.find_window
+        self._globals['get_active_window'] = self.get_active_window
+        self._globals['bring_to_front'] = self.bring_to_front
         
         # Utility functions
-        self.sleep = time.sleep
-        self.log = self.logger.info
-        self.debug = self.debug.log
+        self._globals['sleep'] = self.sleep
+        self._globals['log'] = self.log
+        self._globals['debug'] = self.debug
+        self._globals['wait_for_window'] = self.wait_for_window
+        self._globals['repeat'] = self.repeat
+        self._globals['wait_until'] = self.wait_until
         
-        # Helper functions
-        def wait_for_window(title: str, timeout: float = 10.0) -> Optional[WindowInfo]:
-            """Wait for window to appear."""
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                window = window_manager.get_window_by_title(title)
-                if window:
-                    return window
-                time.sleep(0.1)
-            return None
-        
-        def repeat(count: int, func: Callable, *args, **kwargs):
-            """Repeat function multiple times."""
-            for _ in range(count):
-                if self._stop_flag.is_set():
-                    break
-                func(*args, **kwargs)
-        
-        def wait_until(condition: Callable, timeout: float = 10.0) -> bool:
-            """Wait until condition is met."""
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                if self._stop_flag.is_set():
-                    return False
-                if condition():
-                    return True
-                time.sleep(0.1)
-            return False
-        
-        # Add helper functions
-        self.wait_for_window = wait_for_window
-        self.repeat = repeat
-        self.wait_until = wait_until
+        # Constants
+        self._globals['MOUSE_LEFT'] = MouseButton.LEFT.name
+        self._globals['MOUSE_RIGHT'] = MouseButton.RIGHT.name
+        self._globals['MOUSE_MIDDLE'] = MouseButton.MIDDLE.name
+
+    def key_press(self, key: str, duration: Optional[float] = None) -> bool:
+        """Press and release a key."""
+        self._check_stop()
+        return input_simulator.key_press(key, duration)
+
+    def key_down(self, key: str) -> bool:
+        """Press a key."""
+        self._check_stop()
+        return input_simulator.key_down(key)
+
+    def key_up(self, key: str) -> bool:
+        """Release a key."""
+        self._check_stop()
+        return input_simulator.key_up(key)
+
+    def mouse_move(self, x: int, y: int, duration: Optional[float] = None,
+                  relative: bool = False) -> bool:
+        """Move mouse cursor."""
+        self._check_stop()
+        return input_simulator.mouse_move(x, y, duration, relative)
+
+    def mouse_click(self, button: str, duration: Optional[float] = None) -> bool:
+        """Click mouse button."""
+        self._check_stop()
+        return input_simulator.mouse_click(button, duration)
+
+    def mouse_scroll(self, delta: int) -> bool:
+        """Scroll mouse wheel."""
+        self._check_stop()
+        return input_simulator.mouse_scroll(delta)
+
+    def get_window(self, handle: int) -> Optional[Dict]:
+        """Get window information."""
+        self._check_stop()
+        window = window_manager.get_window(handle)
+        if window:
+            return {
+                'handle': window.handle,
+                'title': window.title,
+                'class_name': window.class_name,
+                'process_name': window.process_name,
+                'rect': (window.rect.left, window.rect.top,
+                        window.rect.right, window.rect.bottom)
+            }
+        return None
+
+    def find_window(self, title: Optional[str] = None,
+                   class_name: Optional[str] = None,
+                   process_name: Optional[str] = None) -> Optional[Dict]:
+        """Find window by properties."""
+        self._check_stop()
+        window = window_manager.find_window(title, class_name, process_name)
+        if window:
+            return {
+                'handle': window.handle,
+                'title': window.title,
+                'class_name': window.class_name,
+                'process_name': window.process_name,
+                'rect': (window.rect.left, window.rect.top,
+                        window.rect.right, window.rect.bottom)
+            }
+        return None
+
+    def get_active_window(self) -> Optional[Dict]:
+        """Get active window."""
+        self._check_stop()
+        window = window_manager.get_active_window()
+        if window:
+            return {
+                'handle': window.handle,
+                'title': window.title,
+                'class_name': window.class_name,
+                'process_name': window.process_name,
+                'rect': (window.rect.left, window.rect.top,
+                        window.rect.right, window.rect.bottom)
+            }
+        return None
+
+    def bring_to_front(self, handle: int) -> bool:
+        """Bring window to front."""
+        self._check_stop()
+        return window_manager.bring_to_front(handle)
+
+    def sleep(self, seconds: float) -> None:
+        """Sleep for specified duration."""
+        self._check_stop()
+        time.sleep(seconds)
+
+    def log(self, message: str) -> None:
+        """Log message."""
+        self.logger.info(message)
+
+    def debug(self, message: str) -> None:
+        """Log debug message."""
+        self.logger.debug(message)
+
+    def wait_for_window(self, title: str, timeout: float = 10.0) -> Optional[Dict]:
+        """Wait for window to appear."""
+        self._check_stop()
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            window = self.find_window(title=title)
+            if window:
+                return window
+            time.sleep(0.1)
+            self._check_stop()
+        return None
+
+    def repeat(self, count: int, func: Callable, *args, **kwargs) -> None:
+        """Repeat function multiple times."""
+        self._check_stop()
+        for _ in range(count):
+            func(*args, **kwargs)
+            self._check_stop()
+
+    def wait_until(self, condition: Callable[[], bool],
+                  timeout: float = 10.0) -> bool:
+        """Wait until condition is met."""
+        self._check_stop()
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if condition():
+                return True
+            time.sleep(0.1)
+            self._check_stop()
+        return False
+
+    def _check_stop(self) -> None:
+        """Check if script should stop."""
+        if self._stop_flag:
+            raise InterruptedError("Script execution stopped")
+
+    def stop(self) -> None:
+        """Stop script execution."""
+        self._stop_flag = True
+
+    def reset(self) -> None:
+        """Reset script state."""
+        self._stop_flag = False
+        self._locals.clear()
 
 class MacroScript:
-    """Handles macro script execution."""
+    """Manages macro script execution."""
     
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+            return cls._instance
+
     def __init__(self):
-        self.logger = logging.getLogger('MacroScript')
-        self.debug = get_debug_helper()
-        
-        # State
-        self.state = ScriptState.IDLE
-        self._context = ScriptContext()
-        self._thread: Optional[threading.Thread] = None
-        self._lock = threading.Lock()
-        
-        # Callbacks
-        self.on_state_change: Optional[Callable[[ScriptState], None]] = None
-        self.on_script_complete: Optional[Callable[[], None]] = None
-        self.on_script_error: Optional[Callable[[str], None]] = None
+        if not hasattr(self, '_initialized'):
+            self.logger = logging.getLogger('MacroScript')
+            self.debug = get_debug_helper()
+            
+            # Script API
+            self._api = ScriptAPI()
+            
+            # State
+            self._script_thread: Optional[threading.Thread] = None
+            self._running = False
+            
+            self._initialized = True
 
     def validate_script(self, script: str) -> Optional[str]:
         """Validate script syntax."""
         try:
             ast.parse(script)
             return None
+        except SyntaxError as e:
+            return f"Line {e.lineno}: {e.msg}"
         except Exception as e:
             return str(e)
 
     def run_script(self, script: str) -> bool:
-        """Run macro script."""
+        """Run script."""
         try:
-            if self.state != ScriptState.IDLE:
+            # Check if already running
+            if self._running:
                 return False
             
             # Validate script
             error = self.validate_script(script)
             if error:
-                if self.on_script_error:
-                    self.on_script_error(error)
+                self.logger.error(f"Script validation failed: {error}")
                 return False
             
-            with self._lock:
-                # Reset state
-                self._context._stop_flag.clear()
-                self._context._pause_flag.clear()
-                self._context.state = ScriptState.RUNNING
-                self.state = ScriptState.RUNNING
-                
-                if self.on_state_change:
-                    self.on_state_change(self.state)
-                
-                # Start execution thread
-                self._thread = threading.Thread(
-                    target=self._run_script_thread,
-                    args=(script,),
-                    daemon=True
-                )
-                self._thread.start()
-                
-                return True
+            # Reset API
+            self._api.reset()
+            
+            # Start script thread
+            self._script_thread = threading.Thread(
+                target=self._run_script_thread,
+                args=(script,),
+                name="MacroScript"
+            )
+            self._script_thread.start()
+            self._running = True
+            
+            return True
             
         except Exception as e:
             self.logger.error(f"Failed to run script: {e}")
             return False
 
-    def _run_script_thread(self, script: str):
-        """Script execution thread."""
-        try:
-            # Prepare globals
-            globals_dict = {
-                '__builtins__': {
-                    name: getattr(__builtins__, name)
-                    for name in dir(__builtins__)
-                    if name in [
-                        'True', 'False', 'None',
-                        'int', 'float', 'str', 'bool',
-                        'list', 'dict', 'tuple', 'set',
-                        'len', 'range', 'enumerate',
-                        'print', 'isinstance', 'hasattr',
-                        'min', 'max', 'abs', 'round'
-                    ]
-                }
-            }
-            
-            # Add API functions
-            for name, func in inspect.getmembers(self._context):
-                if not name.startswith('_'):
-                    if inspect.ismethod(func) or inspect.isfunction(func):
-                        globals_dict[name] = func
-            
-            # Execute script
-            exec(script, globals_dict, self._context.variables)
-            
-            # Script complete
-            if self.on_script_complete:
-                self.on_script_complete()
-            
-        except Exception as e:
-            self.logger.error(f"Script error: {e}")
-            if self.on_script_error:
-                self.on_script_error(str(e))
-            self.state = ScriptState.ERROR
-            if self.on_state_change:
-                self.on_state_change(self.state)
-            
-        finally:
-            # Reset state
-            with self._lock:
-                self.state = ScriptState.IDLE
-                self._context.state = ScriptState.IDLE
-                if self.on_state_change:
-                    self.on_state_change(self.state)
-
     def stop_script(self) -> bool:
         """Stop script execution."""
         try:
-            if self.state == ScriptState.IDLE:
+            if not self._running:
                 return False
             
-            with self._lock:
-                # Signal stop
-                self._context._stop_flag.set()
-                self._context._pause_flag.clear()
-                
-                # Wait for thread
-                if self._thread:
-                    self._thread.join(timeout=1.0)
-                
-                # Reset state
-                self.state = ScriptState.IDLE
-                self._context.state = ScriptState.IDLE
-                
-                if self.on_state_change:
-                    self.on_state_change(self.state)
-                
-                return True
+            # Signal stop
+            self._api.stop()
+            
+            # Wait for thread
+            if self._script_thread and self._script_thread.is_alive():
+                self._script_thread.join(timeout=1.0)
+            
+            # Reset state
+            self._running = False
+            self._script_thread = None
+            
+            return True
             
         except Exception as e:
             self.logger.error(f"Failed to stop script: {e}")
             return False
 
-    def pause_script(self) -> bool:
-        """Pause script execution."""
+    def _run_script_thread(self, script: str) -> None:
+        """Script execution thread."""
         try:
-            if self.state != ScriptState.RUNNING:
-                return False
+            # Prepare globals
+            globals_dict = self._api._globals.copy()
+            globals_dict['__builtins__'] = __builtins__
             
-            with self._lock:
-                self._context._pause_flag.set()
-                self.state = ScriptState.PAUSED
-                self._context.state = ScriptState.PAUSED
-                
-                if self.on_state_change:
-                    self.on_state_change(self.state)
-                
-                return True
+            # Execute script
+            exec(script, globals_dict, self._api._locals)
             
+        except InterruptedError:
+            self.logger.info("Script execution stopped")
         except Exception as e:
-            self.logger.error(f"Failed to pause script: {e}")
-            return False
+            self.logger.error(f"Script error: {traceback.format_exc()}")
+        finally:
+            self._running = False
 
-    def resume_script(self) -> bool:
-        """Resume script execution."""
-        try:
-            if self.state != ScriptState.PAUSED:
-                return False
-            
-            with self._lock:
-                self._context._pause_flag.clear()
-                self.state = ScriptState.RUNNING
-                self._context.state = ScriptState.RUNNING
-                
-                if self.on_state_change:
-                    self.on_state_change(self.state)
-                
-                return True
-            
-        except Exception as e:
-            self.logger.error(f"Failed to resume script: {e}")
-            return False
+    def is_running(self) -> bool:
+        """Check if script is running."""
+        return self._running
 
     def get_api_docs(self) -> Dict[str, str]:
         """Get API documentation."""
         docs = {}
-        
-        for name, func in inspect.getmembers(self._context):
-            if not name.startswith('_'):
-                if inspect.ismethod(func) or inspect.isfunction(func):
-                    docs[name] = inspect.getdoc(func) or "No documentation available."
-        
+        for name, func in self._api._globals.items():
+            if callable(func) and not name.startswith('_'):
+                doc = inspect.getdoc(func)
+                if doc:
+                    docs[name] = doc
         return docs
 
     def cleanup(self):
         """Clean up resources."""
         try:
-            # Stop script if running
-            if self.state != ScriptState.IDLE:
-                self.stop_script()
+            self.stop_script()
             
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
